@@ -49,7 +49,6 @@ async function pair(offset) {
   seats.push(b);
   assert.equal(a.code, b.code);
   assert.equal(b.state.phase, "playing");
-  assert.equal(b.economy.payoutsEnabled, false);
   return [a, b];
 }
 

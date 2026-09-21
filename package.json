@@ -22,8 +22,6 @@
     "test:arena": "node tests/arena-browser.mjs",
     "test:friend": "node tests/friend-browser.mjs",
     "test:playfield": "node tests/shared-battlefield-browser.mjs",
-    "test:contracts": "forge test --root contracts",
-    "test:wagers": "node --experimental-strip-types tests/wager-integration.ts",
     "test:menu": "node tests/title-menu-browser.mjs",
     "test:placement": "node tests/shared-battlefield-browser.mjs",
     "test:commander": "node tests/commander-browser.mjs",

@@ -3,7 +3,7 @@
 - **Builder/contact:** [b00ste](https://github.com/b00ste)
 - **Category:** Character Spotlight / multiplayer strategy
 - **Source:** [b00ste/farfield](https://github.com/b00ste/farfield)
-- **Playable demo:** [Launch Farfield](https://4173--main--ai-dev-01--daniel.kethalia.com/?submission=1)
+- **Playable demo:** [Launch Farfield](https://farfield.fun/?submission=1)
 
 Your Rare Friend leads a tetromino space station: build paths, assign workers, fight rival commanders and contest four shared monoliths.
 
@@ -11,8 +11,8 @@ Your Rare Friend leads a tetromino space station: build paths, assign workers, f
 
 Connect a wallet holding an eligible **hardwired Generations Friend, generation 1 or later**, on **Robinhood mainnet (chain 4663)**. FriendSDK verifies ownership and supplies the selected Friend's canonical artwork and animations. The Friend is your playable commander, with movement, work, construction, combat, healing, Shield and EMP abilities. Commander selection is optional before play; the full-screen collection lets you inspect and change Friends.
 
+- **Online PvP → Find free match:** free automatic one-versus-one matchmaking. The second player starts the match; invite another tester if the queue is empty.
 - **Friends & AI:** up to four commanders total, any mix of humans and Easy/Normal/Hard AI. Enter the sector, share the room code from Menu → Match & invitations, and begin once everyone joins. Each commander builds a separate station on one shared battlefield.
-- **Online PvP → Find practice match:** free automatic one-versus-one matchmaking. The second player starts the match; invite another tester if the queue is empty.
 - **Win:** hold all four shared monoliths uncontested for 60 seconds, or be the last surviving core. Friends must walk there on completed paths; rival Friends/guards can contest ownership. Enemy bases remain hidden until explored.
 
 The linked submission mode renders the game at **960×640 logical pixels**, scales uniformly and letterboxes to fit. The normal demo URL also offers a responsive full-window layout for phones and large monitors. Both use the same simulation. No installation is required.
@@ -32,9 +32,7 @@ The linked submission mode renders the game at **960×640 logical pixels**, scal
 
 Buildings cost alloy, workers cost alloy and food, and abilities spend energy. Unfinished cancellation refunds 100%; completed dismantling removes its tiles and refunds 75%. Your units walk clear automatically before removal, and a connected route to your core must remain. Enemy-destroyed buildings leave walkable wreckage and refund nothing.
 
-## Costs, rewards and wallet safety
-
-**This submitted MVP is free and simulated.** Alloy, food and energy have no on-chain value. Custom and practice matches take no deposits and pay no tokens. The displayed future 1 RF entry / 2 RF prize mode is disabled on mainnet. Experimental escrow/referee contracts and local-chain tests are included in the source; they are not deployed or independently audited. The SDK chance-game schema is unused scaffolding; no purchase/reward action is exposed.
+All playable matches are free. Alloy, food and energy are in-game simulation resources.
 
 ## Implementation and running locally
 
@@ -47,7 +45,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:4173/?submission=1`. This needs a Node backend; static hosting alone is insufficient. `npm test`, `npm run typecheck`, `npm run check` and `npm run build` provide the core checks. The repository documents browser tests, contracts and runtime settings.
+Open `http://localhost:4173/?submission=1`. This needs a Node backend; static hosting alone is insufficient. `npm test`, `npm run typecheck`, `npm run check` and `npm run build` provide the core checks. The repository documents browser tests and runtime settings.
 
 ## Validation and known limitations
 
@@ -55,7 +53,7 @@ See the source repository's `docs/LIVE-PLAYTEST.md` for live four-session eviden
 
 The original live browser runs exercised four-player construction, shared capture, contesting, combat and an agreed winner. A subsequent seven-minute run reached 237 buildings / 256 workers but exposed development-proxy HTTP 429 responses on sync polling; earlier error summaries did not fully count those responses. The client now receives persistent authenticated server events. The replacement seven-minute streaming run passed with 230 buildings / 256 workers / 486 commands and zero game, page or HTTP errors. Container build/restart recovery also passed in hosted CI. See `docs/PLAYTEST-2026-09-21.md`; larger public capacity remains unverified.
 
-Early access: heuristic AI and human balance need more playtesting. The preview now enables private practice-room snapshots and same-tab seat recovery after wallet/Friend revalidation. Crashes can lose changes since the last successful checkpoint, normally about five seconds. Closing the tab or switching devices does not preserve a practice seat. Online absence beyond 60 seconds can forfeit even while opponents are backgrounded. The demo still runs on a development workspace, with no production uptime guarantee; an external cloud deployment is prepared but not provisioned.
+Early access: heuristic AI and human balance need more playtesting. The preview now enables private practice-room snapshots and same-tab seat recovery after wallet/Friend revalidation. Crashes can lose changes since the last successful checkpoint, normally about five seconds. Closing the tab or switching devices does not preserve a practice seat. Online absence beyond 60 seconds can forfeit even while opponents are backgrounded. The public beta runs on dedicated AWS resources with a single authoritative server; automatic failover is not yet available.
 
 ## Credits
 

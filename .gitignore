@@ -13,9 +13,6 @@ deploy/aws/*.tfplan
 deploy/aws/*.tfvars
 deploy/aws/crash.log
 
-contracts/out/
-contracts/cache/
-
 # Server-side room snapshots contain private seat capabilities.
 .farfield/
 backups/

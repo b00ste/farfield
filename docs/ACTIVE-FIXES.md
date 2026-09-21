@@ -12,7 +12,6 @@ This checklist tracks the current batch of user reports. Earlier features remain
 - [x] Player chooses any tetromino shape; no forced random piece; preview and server agree.
 - [x] Validate desktop and phone in Browser Testing; rebuilt and refreshed live preview.
 
-Still gated by earlier user instructions: paid 1 RF mainnet mode needs funded deployment and testing; vibeathon submission waits until the user is happy. Neither is enabled/submitted by this UI fix batch.
 
 Evidence and exact coverage: [VALIDATION.md](VALIDATION.md), final playtest-fixes section. All 42 logic tests, typecheck, SDK check and build pass; desktop/phone browser checks cover the current batch.
 
@@ -31,7 +30,7 @@ Evidence and exact coverage: [VALIDATION.md](VALIDATION.md), final playtest-fixe
 
 ## Shared battlefield and construction controls
 
-These rules supersede the earlier separate-sector, remote-research and deposit mechanics.
+These rules supersede the earlier separate-sector and remote-research mechanics.
 
 - [x] Four shared monoliths: Friend captures in 10 seconds; rival Friends/guards contest; holding all four uncontested for 60 seconds wins, with a visible countdown.
 - [x] Remove flying raids. Friend and guards fight on connected completed flooring, including neutral/enemy flooring. Clicking enemy units/buildings orders an attack.
@@ -144,3 +143,10 @@ Implementation is complete. Candidate browser validation and production rollout 
 - [x] Verify desktop QR generation and iPhone/iPad standalone mobile link generation for both wallets with real connectors/relay, without approving a wallet connection or signing.
 
 Physical app launch and authorization still require the owner's wallet/device. This adds a direct Zerion route without relying on the external WalletConnect search directory.
+
+## Free online play
+
+- Online PvP is the first title action, followed by Friends & AI and Join friends.
+- Free matchmaking is the active online option. The future-mode label is disabled.
+- Settings, matchmaking, help and results contain only current gameplay information.
+- Validated with desktop/tablet/phone browser menus and a two-session online match.

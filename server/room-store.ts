@@ -264,7 +264,7 @@ function validateRoom(value: unknown): asserts value is Room {
   }
 }
 
-/** Single-process practice-room recovery, not shared storage or HA.
+/** Single-process room recovery, not shared storage or HA.
  * The caller's save interval (normally five seconds) is the maximum crash-loss
  * window. Seat tokens are secrets: keep this path on a private persistent volume.
  */
@@ -322,8 +322,6 @@ export class RoomStore {
     const now = this.now(),
       rooms = new Map<string, Room>();
     for (const room of snapshot.rooms) {
-      // Wagers must never resume through this practice-only persistence path.
-      if (object(room) && room.wager !== undefined) continue;
       validateRoom(room);
       if (now - room.touched > EXPIRY_MS) continue;
       check(!rooms.has(room.code), "duplicate room code");
@@ -347,7 +345,7 @@ export class RoomStore {
       version: VERSION,
       savedAt: now,
       rooms: [...rooms.values()].filter(
-        (room) => !room.wager && now - room.touched <= EXPIRY_MS,
+        (room) => now - room.touched <= EXPIRY_MS,
       ),
     });
     if (Buffer.byteLength(text) > MAX_BYTES)

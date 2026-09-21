@@ -11,12 +11,11 @@ COPY games ./games
 COPY host ./host
 COPY scripts ./scripts
 COPY server ./server
-COPY shared ./shared
 COPY tsconfig.json ./
 RUN npm run build
 
 FROM node:24-bookworm-slim AS runtime
-ENV NODE_ENV=production PORT=4173 RF_WAGERS_ENABLED=false
+ENV NODE_ENV=production PORT=4173
 WORKDIR /app
 # Docker initializes a new named volume from this owned directory. The marker
 # ensures the UID 1000 directory is populated on first use, without root startup.

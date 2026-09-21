@@ -20,7 +20,6 @@ services:
       NODE_ENV: production
       PORT: "4173"
       FARFIELD_STATE_PATH: /data/rooms.json
-      RF_WAGERS_ENABLED: "false"
       FARFIELD_ALLOWED_ORIGINS: ${FARFIELD_ALLOWED_ORIGINS:-}
     volumes:
       - rooms:/data

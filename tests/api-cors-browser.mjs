@@ -20,13 +20,18 @@ try {
   await page.goto(origin, { waitUntil: "domcontentloaded" });
   const probe = async (url) => {
     try {
-      const response = await fetch(url + "/api/wager/config", {
+      const response = await fetch(url + "/api/friend-rpc", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer cross-origin-probe",
         },
-        body: "{}",
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "eth_chainId",
+          params: [],
+        }),
       });
       return {
         readable: true,

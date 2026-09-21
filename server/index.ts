@@ -6,7 +6,6 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 import { Rooms } from "./rooms.ts";
-import { Wagers } from "./wagers.ts";
 import { forwardFriendRpc } from "./friend-rpc.ts";
 import type { Command } from "../games/farfield/engine.ts";
 const rooms = new Rooms(),
@@ -44,12 +43,7 @@ const checkpointTimer = store
       void checkpoint();
     }, 5000)
   : null;
-const wagers = new Wagers(rooms);
 const streams = new RoomStreams(rooms);
-void wagers.initialize();
-const wagerTimer = setInterval(() => {
-  void wagers.pump();
-}, 2000);
 const limits = new RequestLimits((token) =>
   [...rooms.rooms.values()].some((room) =>
     room.players.some((player) => !player.bot && player.token === token),
@@ -114,26 +108,6 @@ const server = createServer(async (req, res) => {
       const body = JSON.parse(raw || "{}");
       if (!body || typeof body !== "object")
         throw new Error("Invalid request.");
-      if (url.pathname === "/api/wager/config") {
-        res.end(JSON.stringify(wagers.config()));
-        return;
-      }
-      if (url.pathname === "/api/wager/challenge") {
-        res.end(JSON.stringify(wagers.challenge(body.address, body.friendId)));
-        return;
-      }
-      if (url.pathname === "/api/wager/auth") {
-        res.end(
-          JSON.stringify(await wagers.authenticate(body.nonce, body.signature)),
-        );
-        return;
-      }
-      if (url.pathname === "/api/wager/status") {
-        res.end(
-          JSON.stringify(await wagers.status(body.id, body.address, body.hash)),
-        );
-        return;
-      }
       if (url.pathname === "/api/friend-rpc") {
         res.end(JSON.stringify(await forwardFriendRpc(body)));
         return;
@@ -150,13 +124,7 @@ const server = createServer(async (req, res) => {
         )
           throw new Error("Invalid Friend.");
         if (url.pathname === "/api/matchmake") {
-          res.end(
-            JSON.stringify(
-              body.wager
-                ? wagers.matchmake(body.auth, body.friendId)
-                : rooms.matchmake(body.friendId),
-            ),
-          );
+          res.end(JSON.stringify(rooms.matchmake(body.friendId)));
           return;
         }
         if (url.pathname === "/api/create") {
@@ -188,6 +156,10 @@ const server = createServer(async (req, res) => {
             throw new Error("Enter a 10-character station code.");
           res.end(JSON.stringify(rooms.join(body.code, body.friendId)));
         }
+        return;
+      }
+      if (!["/api/events", "/api/leave", "/api/sync", "/api/command"].includes(url.pathname)) {
+        res.writeHead(404).end(JSON.stringify({ error: "Unknown endpoint." }));
         return;
       }
       if (typeof body.code !== "string")
@@ -273,7 +245,6 @@ const shutdown = async () => {
   if (stopping) return;
   stopping = true;
   clearInterval(interval);
-  clearInterval(wagerTimer);
   if (checkpointTimer) clearInterval(checkpointTimer);
   streams.closeAll();
   const deadline = setTimeout(() => process.exit(1), 25000);

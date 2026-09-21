@@ -72,7 +72,7 @@ test("matchmaking pairs separate humans, starts atomically, blocks pause and set
   const b = rooms.matchmake("2", 1001);
   assert.equal(a.code, b.code);
   assert.equal(b.state.phase, "playing");
-  assert.equal(b.economy.payoutsEnabled, false);
+  assert.equal(b.players.length, 2);
   assert.throws(
     () => rooms.command(a.code, a.token, { type: "pause" }, 1001),
     /cannot be paused/,

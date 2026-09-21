@@ -13,7 +13,6 @@ import { tmpdir } from "node:os";
 import { Rooms } from "../server/rooms.ts";
 import { RoomStore } from "../server/room-store.ts";
 import { createActor } from "../games/farfield/actors.ts";
-import type { Wager } from "../shared/wagers.ts";
 
 async function fixture(t: TestContext) {
   const directory = await mkdtemp(join(tmpdir(), "farfield-store-"));
@@ -39,7 +38,7 @@ async function fixture(t: TestContext) {
   };
 }
 
-test("practice rooms recover tokens, commands, fog, paused state and shared references without advancing offline time", async (t) => {
+test("rooms recover tokens, commands, fog, paused state and shared references without advancing offline time", async (t) => {
   const f = await fixture(t);
   assert.equal((await f.store.load()).size, 0);
   const room = f.rooms.rooms.get(f.seat.code)!;
@@ -130,24 +129,20 @@ test("restarted free online matches grant a fresh reconnect window", async (t) =
   );
 });
 
-test("expired and wager rooms are excluded on save and load", async (t) => {
+test("expired rooms are excluded on save and load", async (t) => {
   const f = await fixture(t);
   const original = f.rooms.rooms.get(f.seat.code)!;
   const expired = structuredClone(original);
   expired.code = "AAAAAAAAAA";
   expired.touched -= 7_200_001;
-  const wager = structuredClone(original);
-  wager.code = "BBBBBBBBBB";
-  wager.wager = {} as Wager;
   f.rooms.rooms.set(expired.code, expired);
-  f.rooms.rooms.set(wager.code, wager);
   await f.store.save(f.rooms.rooms);
   const disk = JSON.parse(await readFile(f.filename, "utf8"));
   assert.deepEqual(
     disk.rooms.map((r: { code: string }) => r.code),
     [original.code],
   );
-  disk.rooms.push(expired, wager);
+  disk.rooms.push(expired);
   await writeFile(f.filename, JSON.stringify(disk));
   assert.deepEqual([...(await f.store.load()).keys()], [original.code]);
 });

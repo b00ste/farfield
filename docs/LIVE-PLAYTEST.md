@@ -23,7 +23,7 @@ PLAY_SECONDS=210 WIN_PHASE=1 node tests/live-four-player.mjs
 node tests/submission-browser.mjs
 ```
 
-Artifacts remain in `artifacts/` (ignored, not source assets). Request reports contain timings and gameplay stats, not wallet/referee private keys or saved seat tokens.
+Artifacts remain in `artifacts/` (ignored, not source assets). Request reports contain timings and gameplay stats, not wallet private keys or saved seat tokens.
 
 ## Live objective and combat match
 

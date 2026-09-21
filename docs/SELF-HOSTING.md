@@ -2,7 +2,7 @@
 
 The shortest public setup is **one Linux server, Docker Compose and a domain**. Caddy provides HTTPS; the Node service serves the game and runs matches. You can use one hostname or split the frontend and API across two hostnames on the same machine.
 
-For provider comparisons and the Farfield AWS plan, see [hosting options](CLOUD-HOSTING.md). This guide runs **free practice/custom matches**; RF wagering stays disabled. Anyone can host the source, but playing through the normal UI still requires an eligible Rare Friend and wallet.
+For provider comparisons and the Farfield AWS plan, see [hosting options](CLOUD-HOSTING.md). This guide runs **free online/custom matches**. Anyone can host the source, but playing through the normal UI still requires an eligible Rare Friend and wallet.
 
 ## Try it locally
 
@@ -109,7 +109,6 @@ Separate domains are an organization/deployment boundary, not two independent ga
 | `FARFIELD_STATE_PATH`      | Server runtime          | Absolute private snapshot path; Compose sets `/data/rooms.json`                   |
 | `PORT`                     | Server runtime          | Internal HTTP port; Compose uses `4173`                                           |
 | `FRIEND_RPC_URL`           | Optional server runtime | Alternate upstream RPC provider for permitted ownership/artwork reads             |
-| `RF_WAGERS_ENABLED`        | Server runtime          | Keep `false` for this deployment                                                  |
 
 Compose reads optional private runtime settings from `deploy/runtime.env`, or the absolute file path set by `FARFIELD_RUNTIME_ENV_FILE`. This requires Docker Compose 2.30+ for raw environment-file support. Put `FRIEND_RPC_URL` there to use a private provider; keep the file mode `0600`. This is a server-only setting, never a build argument or a frontend environment variable. The supplied Git/Docker ignores exclude the default private file. A local environment file is not encrypted storage; use your host's secret manager for its source of truth.
 
@@ -117,7 +116,7 @@ The browser always calls the game's `/api/friend-rpc` proxy. Only permitted read
 
 The image runs as UID 1000. New named volumes inherit the owned `/data` directory; an existing manually created root-owned volume needs its ownership corrected for that UID. The state file must remain outside `games/farfield/.friendsdk`, and readable only by the service/operator. Saved room capabilities grant access to player seats: do not publish snapshots, logs containing authorization headers, or backup files.
 
-The browser gets no referee key, cloud credential or signer from the server. Keep any future referee secret in a separate runtime secret store and follow [ESCROW.md](ESCROW.md), not the frontend build variables.
+The browser gets no cloud credential or signer from the server. Keep private server configuration outside frontend build variables.
 
 ## Verify the installation
 
@@ -151,7 +150,7 @@ Then validate through the public address:
 
 For split domains, the game's requests must go to the API hostname and return CORS headers allowing the frontend origin. An HTTP 200 healthcheck alone cannot establish that browser CORS, wallet handoff or event streaming works.
 
-Rooms expire after two inactive hours. Practice seat credentials remain in the same browser tab/session; copying the room code to a different browser does not recover that player's capability. Snapshots save practice rooms every five seconds and during graceful shutdown. A crash loses changes since the last successful write, normally around five seconds but longer if storage stalls. Paid rooms are excluded from this store.
+Rooms expire after two inactive hours. Practice seat credentials remain in the same browser tab/session; copying the room code to a different browser does not recover that player's capability. Snapshots save practice rooms every five seconds and during graceful shutdown. A crash loses changes since the last successful write, normally around five seconds but longer if storage stalls.
 
 ## Backups, restore and upgrades
 

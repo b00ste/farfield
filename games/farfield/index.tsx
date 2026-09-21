@@ -556,8 +556,6 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                   : "create",
               {
                 friendId: String(friendId),
-                wager: config.wager,
-                auth: config.auth,
                 code: config.code,
                 mode: config.mode,
                 bots: config.bots,
@@ -1025,34 +1023,17 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
           <div>
             <strong>
               {room.mode === "online"
-                ? room.economy.wager && room.players.length === 2
-                  ? `Escrow · ${room.economy.wager.status}`
-                  : "Searching for an opponent…"
+                ? "Searching for an opponent…"
                 : "Your sector is ready"}
             </strong>
             <span>
               {room.mode === "online"
-                ? room.economy.wager
-                  ? "1 RF each · 2 RF winner pool · both deposits required"
-                  : "Practice · no deposit or payout"
+                ? "1 vs 1 · match starts when an opponent joins"
                 : `${room.players.length} / ${room.maxPlayers} commanders · invite friends or add AI`}
             </span>
           </div>
           {room.mode === "online" ? (
-            room.economy.wager && room.players.length === 2 ? (
-              <button
-                disabled={
-                  !["funding", "active"].includes(room.economy.wager.status)
-                }
-                onClick={() =>
-                  void request("escrow", { id: room.economy.wager!.id })
-                }
-              >
-                Review & deposit 1 RF
-              </button>
-            ) : (
-              <button onClick={() => void returnHome()}>Cancel search</button>
-            )
+            <button onClick={() => void returnHome()}>Cancel search</button>
           ) : (
             <>
               <button onClick={() => setPanel("match")}>Invite & AI</button>
@@ -1532,26 +1513,6 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
             <p>
               {linked}/4 signals · {state.placed} modules · {clock(state.time)}
             </p>
-            {room?.economy.wager ? (
-              <>
-                <p>
-                  Escrow: {room.economy.wager.status}.{" "}
-                  {room.economy.wager.status === "refundable"
-                    ? "The result window expired. Claim your refund."
-                    : "The winner claims the full 2 RF once settlement confirms."}
-                </p>
-                <button
-                  className="primary"
-                  onClick={() =>
-                    void request("escrow", { id: room.economy.wager!.id })
-                  }
-                >
-                  Open payout / refund
-                </button>
-              </>
-            ) : (
-              <p>Practice match · no tokens deposited or paid out.</p>
-            )}
             <button
               className="primary launch"
               onClick={() => void returnHome()}
@@ -1781,16 +1742,6 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
               >
                 Wallet & connection →
               </button>
-              {room?.economy.wager && (
-                <button
-                  className="setting-row"
-                  onClick={() =>
-                    void request("escrow", { id: room.economy.wager!.id })
-                  }
-                >
-                  RF escrow / refunds →
-                </button>
-              )}
               <button
                 className="setting-row"
                 aria-pressed={!muted}
@@ -1844,9 +1795,8 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                   {confirmForfeit && (
                     <>
                       <p>
-                        {room?.economy.wager
-                          ? "Forfeiting awards the full 2 RF pool to your opponent."
-                          : "Your station will lose immediately. The other commanders can continue."}
+                        Your station will lose immediately. The other commanders
+                        can continue.
                       </p>
                       <button
                         className="danger"
@@ -1871,11 +1821,9 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
               )}
               <p className="note">
                 {room?.mode === "online"
-                  ? room.economy.wager
-                    ? "1 RF online match · winner claims 2 RF. Disconnects longer than 60 seconds forfeit."
-                    : "Online practice · 1 vs 1 · no deposit or payout. Disconnects longer than 60 seconds forfeit."
-                  : "Custom match · no token entry fee."}{" "}
-                Menu controls do not pause opponents. Reloading loses your seat.
+                  ? "Online PvP · 1 vs 1. Disconnects longer than 60 seconds forfeit."
+                  : "Custom match · friends and AI."}{" "}
+                Menu controls do not pause opponents.
               </p>
               {error && <p role="alert">{error}</p>}
             </>

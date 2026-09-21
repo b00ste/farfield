@@ -2,8 +2,6 @@ import { readSeat } from "./session";
 import { apiUrl } from "./api";
 import { GameSelect } from "../games/farfield/GameSelect";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { EscrowPanel, wagerApi, type WagerConfig } from "./escrow-panel";
-import type { Hex } from "viem";
 import type { LaunchConfig } from "../games/farfield/launch";
 import {
   ConnectButton,
@@ -17,7 +15,7 @@ import {
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
-import { WagmiProvider, useAccount, useWalletClient } from "wagmi";
+import { WagmiProvider, useAccount } from "wagmi";
 import { ConnectedGameHost } from "@rarefriends/friendsdk/runtime";
 
 import { readOwnedFriends } from "@rarefriends/friendsdk/owned";
@@ -50,21 +48,6 @@ export const walletUi = {
   friendId: null as string | null,
   launch: null as LaunchConfig | null,
 };
-function savedEscrows(address?: string): string[] {
-  try {
-    const list = JSON.parse(
-      localStorage.getItem(`farfield-escrow-history-${address}`) || "[]",
-    );
-    return Array.isArray(list)
-      ? list.filter(
-          (id: unknown) =>
-            typeof id === "string" && /^0x[0-9a-fA-F]{64}$/.test(id),
-        )
-      : [];
-  } catch {
-    return [];
-  }
-}
 function readPreferences() {
   try {
     return JSON.parse(localStorage.getItem("farfield-preferences") || "{}");
@@ -86,40 +69,12 @@ function WalletHost() {
   const { accountModalOpen, openAccountModal } = useAccountModal();
   const { chainModalOpen, openChainModal } = useChainModal();
   const { connectModalOpen, openConnectModal } = useConnectModal();
-  const { data: walletClient } = useWalletClient();
-  const [wagerConfig, setWagerConfig] = useState<WagerConfig | null>(null),
-    [wagerRequested, setWagerRequested] = useState(false);
-  const [escrowId, setEscrowId] = useState<Hex | null>(null),
-    [recoveryId, setRecoveryId] = useState("");
   useEffect(() => {
-    void wagerApi<WagerConfig>("config")
-      .then(setWagerConfig)
-      .catch(() => {});
-  }, []);
-  useEffect(() => {
-    const open = (e: Event) => {
-      const id = (e as CustomEvent).detail;
-      if (typeof id === "string" && /^0x[0-9a-fA-F]{64}$/.test(id)) {
-        setEscrowId(id as Hex);
-        localStorage.setItem(`farfield-escrow-${address}`, id);
-        localStorage.setItem(
-          `farfield-escrow-history-${address}`,
-          JSON.stringify(
-            [id, ...savedEscrows(address).filter((x) => x !== id)].slice(0, 50),
-          ),
-        );
-      }
-    };
-    window.addEventListener("farfield-escrow", open);
     const account = () => openAccountModal?.();
     window.addEventListener("farfield-wallet", account);
-    return () => {
-      window.removeEventListener("farfield-escrow", open);
-      window.removeEventListener("farfield-wallet", account);
-    };
-  }, [address, openAccountModal]);
-  const modalOpen =
-    accountModalOpen || chainModalOpen || connectModalOpen || !!escrowId;
+    return () => window.removeEventListener("farfield-wallet", account);
+  }, [openAccountModal]);
+  const modalOpen = accountModalOpen || chainModalOpen || connectModalOpen;
   walletUi.blocked = modalOpen;
   const identityKey = `${connector?.uid ?? ""}:${address ?? ""}:${chainId ?? ""}`;
   const [assetsReady, setAssetsReady] = useState(false),
@@ -143,7 +98,6 @@ function WalletHost() {
   const [menu, setMenu] = useState<"main" | "custom" | "online" | "join">(
     "main",
   );
-  const [recovery, setRecovery] = useState(false);
   useEffect(() => {
     let live = true;
     Promise.all(
@@ -236,29 +190,9 @@ function WalletHost() {
     let live = true;
     spriteReader
       .read(friend.id)
-      .then(async () => {
-        let auth: string | undefined;
-        if (wagerRequested) {
-          if (!walletClient || !wagerConfig?.enabled)
-            throw new Error("RF matches are not available yet.");
-          const challenge = await wagerApi<{ nonce: string; message: string }>(
-            "challenge",
-            { address, friendId: String(friend.id) },
-          );
-          const signature = await walletClient.signMessage({
-            message: challenge.message,
-          });
-          auth = (
-            await wagerApi<{ auth: string }>("auth", {
-              nonce: challenge.nonce,
-              signature,
-            })
-          ).auth;
-        }
+      .then(() => {
         if (live) {
           setLaunch({
-            wager: wagerRequested,
-            auth,
             mode,
             dock: readPreferences().dock ?? "bottom",
             bots: Array.from({ length: botCount }, () => difficulty),
@@ -283,10 +217,6 @@ function WalletHost() {
       live = false;
     };
   }, [
-    wagerRequested,
-    walletClient,
-    address,
-    wagerConfig,
     playRequested,
     connected,
     discovery.isFetching,
@@ -305,7 +235,6 @@ function WalletHost() {
   useEffect(() => {
     setLaunch(null);
     setPlayRequested(false);
-    setEscrowId(null);
   }, [identityKey]);
   const restored = useRef(false);
   useEffect(() => {
@@ -411,13 +340,6 @@ function WalletHost() {
       className={`farfield-host ${submission ? "submission-mode" : ""} ${launch && friend ? "is-playing" : "is-landing"}`}
       ref={root}
     >
-      {escrowId && (
-        <EscrowPanel
-          key={`${escrowId}:${identityKey}`}
-          id={escrowId}
-          onClose={() => setEscrowId(null)}
-        />
-      )}
       {launch && friend ? (
         <ConnectedGameHost
           key={identityKey}
@@ -463,21 +385,21 @@ function WalletHost() {
                 <nav className="title-menu" aria-label="Main menu">
                   <button
                     onClick={() => {
-                      setMode("custom");
-                      setCode("");
-                      setMenu("custom");
-                    }}
-                  >
-                    Friends & AI <span>01</span>
-                  </button>
-                  <button
-                    onClick={() => {
                       setMode("online");
                       setCode("");
                       setMenu("online");
                     }}
                   >
-                    Online PvP <span>02</span>
+                    Online PvP <span>01</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMode("custom");
+                      setCode("");
+                      setMenu("custom");
+                    }}
+                  >
+                    Friends & AI <span>02</span>
                   </button>
                   <button
                     onClick={() => {
@@ -583,35 +505,10 @@ function WalletHost() {
                     </label>
                   )}
                   {menu === "online" && (
-                    <>
-                      <div className="wager-terms">
-                        <span>
-                          ENTRY<strong>1 RF</strong>
-                        </span>
-                        <span>
-                          WINNER TAKES<strong>2 RF</strong>
-                        </span>
-                      </div>
-                      <button
-                        className="wager-disabled"
-                        disabled={
-                          !wagerConfig?.enabled ||
-                          !connected ||
-                          playRequested ||
-                          discovery.isFetching ||
-                          !friends.length
-                        }
-                        onClick={() => {
-                          setWagerRequested(true);
-                          setAssetError("");
-                          setPlayRequested(true);
-                        }}
-                      >
-                        {wagerConfig?.enabled
-                          ? "Find 1 RF match →"
-                          : "1 RF matches · coming soon"}
-                      </button>
-                    </>
+                    <div className="online-modes" aria-label="Online modes">
+                      <span className="current-online-mode">Free</span>
+                      <button disabled>Wagered · Coming soon</button>
+                    </div>
                   )}
                   <button
                     className="play-button"
@@ -629,7 +526,6 @@ function WalletHost() {
                         return;
                       }
                       setAssetError("");
-                      setWagerRequested(false);
                       setPlayRequested(true);
                     }}
                   >
@@ -640,7 +536,7 @@ function WalletHost() {
                         : playRequested
                           ? "Launching…"
                           : menu === "online"
-                            ? "Find practice match →"
+                            ? "Find free match →"
                             : menu === "join"
                               ? "Join friends →"
                               : "Enter sector →"}
@@ -702,85 +598,23 @@ function WalletHost() {
             />
           )}
           {settings && (
-            <MenuDialog
-              title={recovery ? "RF recovery" : "Settings"}
-              onClose={() => {
-                setSettings(false);
-                setRecovery(false);
-              }}
-            >
-              {!recovery ? (
-                <>
-                  <label>
-                    Sound
-                    <input
-                      type="checkbox"
-                      checked={!muted}
-                      onChange={(e) => setMuted(!e.target.checked)}
-                    />
-                  </label>
-                  <label>
-                    Reduce motion
-                    <input
-                      type="checkbox"
-                      checked={reduced}
-                      onChange={(e) => setReduced(e.target.checked)}
-                    />
-                  </label>
-                  <button
-                    className="settings-link"
-                    onClick={() => setRecovery(true)}
-                  >
-                    RF matches & refunds <span>→</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => setRecovery(false)}>← Settings</button>
-                  {savedEscrows(address).length > 0 && (
-                    <label className="escrow-recovery">
-                      Recent RF matches
-                      <GameSelect
-                        label="Recent escrow matches"
-                        value={recoveryId}
-                        onChange={setRecoveryId}
-                        options={[
-                          { value: "", label: "Select a match" },
-                          ...savedEscrows(address).map((id) => ({
-                            value: id,
-                            label: `${id.slice(0, 10)}…${id.slice(-6)}`,
-                          })),
-                        ]}
-                      />
-                    </label>
-                  )}
-                  <label className="escrow-recovery">
-                    Recover RF match
-                    <input
-                      aria-label="Escrow match ID"
-                      placeholder="0x… match ID"
-                      value={recoveryId}
-                      onChange={(e) => setRecoveryId(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    disabled={
-                      !/^0x[0-9a-fA-F]{64}$/.test(recoveryId) &&
-                      !localStorage.getItem(`farfield-escrow-${address}`)
-                    }
-                    onClick={() =>
-                      setEscrowId(
-                        (recoveryId ||
-                          localStorage.getItem(
-                            `farfield-escrow-${address}`,
-                          )) as Hex,
-                      )
-                    }
-                  >
-                    Open escrow / refunds
-                  </button>
-                </>
-              )}
+            <MenuDialog title="Settings" onClose={() => setSettings(false)}>
+              <label>
+                Sound
+                <input
+                  type="checkbox"
+                  checked={!muted}
+                  onChange={(e) => setMuted(!e.target.checked)}
+                />
+              </label>
+              <label>
+                Reduce motion
+                <input
+                  type="checkbox"
+                  checked={reduced}
+                  onChange={(e) => setReduced(e.target.checked)}
+                />
+              </label>
             </MenuDialog>
           )}
           <footer className="landing-footer">

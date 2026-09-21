@@ -4,12 +4,6 @@ export type RoomView = {
   revision: number;
   mode: "solo" | "pvp" | "custom" | "online";
   maxPlayers: number;
-  economy: {
-    kind: "practice" | "wager";
-    entry: string;
-    payoutsEnabled: boolean;
-    wager?: import("../../shared/wagers.ts").Wager;
-  };
   selfId: string;
   combatAt: number;
   raidReadyAt: number;

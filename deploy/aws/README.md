@@ -63,7 +63,7 @@ It fetches only the public source repository, builds a commit-tagged image, keep
 room data in the persistent `farfield_rooms` Docker volume, starts Caddy, and
 installs boot/start and daily backup services. The source commit needs the split
 game/API configuration in `deploy/compose.yaml`. No wallet or cloud private keys
-are needed inside the application. RF wagers remain disabled.
+are needed inside the application.
 
 Check both HTTPS names, `/health` on the API hostname, a four-browser match,
 reconnection, and a real iPhone/iPad wallet switch before announcing a release.

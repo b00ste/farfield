@@ -13,7 +13,8 @@ const browser = await chromium.launch({
   args: ["--no-sandbox", "--disable-background-timer-throttling"],
 });
 const clients = [],
-  errors = [];
+  errors = [],
+  paymentRequests = [];
 const wait = async (fn, why, ms = 30000) => {
   for (let t = 0; t < ms; t += 100) {
     if (await fn()) return;
@@ -39,6 +40,14 @@ try {
     await observeRoom(page, (view) => {
       if (!c.latest || view.revision >= c.latest.revision) c.latest = view;
       if (view.token) c.token = view.token;
+    });
+    page.on("request", (request) => {
+      if (
+        /\/api\/(wager|escrow|fund|claim)/i.test(
+          new URL(request.url()).pathname,
+        )
+      )
+        paymentRequests.push(new URL(request.url()).pathname);
     });
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("response", async (r) => {
@@ -67,14 +76,14 @@ try {
     assert.equal(
       await page
         .getByRole("button", {
-          name: "1 RF matches · coming soon",
+          name: "Wagered · Coming soon",
           exact: true,
         })
         .isDisabled(),
       true,
     );
     await page
-      .getByRole("button", { name: "Find practice match →", exact: true })
+      .getByRole("button", { name: "Find free match →", exact: true })
       .click();
     await wait(() => c.token, "online seat allocated");
   }
@@ -141,8 +150,54 @@ try {
     );
   }
   assert.deepEqual(errors, []);
+  assert.deepEqual(paymentRequests, []);
+  const walletMethods = [];
+  for (const c of clients) {
+    const methods = await c.page.evaluate(
+      () => window.__friendWalletTest.state.requests,
+    );
+    assert.ok(
+      methods.every(
+        (method) => !/(sign|sendTransaction|sendCalls)/i.test(method),
+      ),
+      "free matches never request signatures or transactions",
+    );
+    walletMethods.push([...new Set(methods)]);
+    assert.equal(
+      "economy" in c.latest,
+      false,
+      "public room view has no payment economy metadata",
+    );
+    assert.doesNotMatch(
+      await c.game
+        .getByRole("region", { name: "Match result", exact: true })
+        .innerText(),
+      /\b(?:RF|tokens?|deposit|payout|escrow|wager|stake|refund)\b/i,
+    );
+  }
+  await writeFile(
+    "artifacts/online-free.json",
+    JSON.stringify(
+      {
+        frontend: origin,
+        api: apiOrigin,
+        checks: [
+          "two independent players matched",
+          "menus do not pause competitive play",
+          "same winner after forfeit",
+          "full-screen results",
+          "no payment payload or requests",
+        ],
+        walletMethods,
+        paymentRequests,
+        errors,
+      },
+      null,
+      2,
+    ),
+  );
   console.log(
-    "PASS live online: two distinct Friends matched automatically, personal menus did not pause play, forfeited, same winner, full-screen results; RF disabled",
+    "PASS live online: two distinct Friends matched automatically, personal menus did not pause play, forfeited, same winner, full-screen results; free mode only",
   );
 } finally {
   for (const c of clients)

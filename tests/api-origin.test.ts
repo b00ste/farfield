@@ -9,7 +9,7 @@ test("all API paths resolve on the configured backend while local hosting stays 
     "/api/sync",
     "/api/command",
     "/api/friend-rpc",
-    "/api/wager/config",
+    "/api/matchmake",
   ]) {
     assert.equal(
       apiUrl(path, "https://api.farfield.fun", "https://farfield.fun"),

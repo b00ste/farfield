@@ -1,6 +1,6 @@
 // Run only on GitHub-hosted CI or an Infrastructure workspace with Docker.
 // Creates its own disposable container + anonymous test volume; never targets
-// the live server or any pre-existing container/volume. No wallet or real money.
+// the live server or any pre-existing container/volume. No wallet required.
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -116,8 +116,6 @@ try {
     "--env",
     "FARFIELD_STATE_PATH=/data/rooms.json",
     "--env",
-    "RF_WAGERS_ENABLED=false",
-    "--env",
     "FARFIELD_ALLOWED_ORIGINS=https://game.example.invalid",
     image,
   );
@@ -221,7 +219,6 @@ try {
   assert.equal(before.state.modules.length, 2);
   assert.equal(before.state.workers.length, 1);
   assert.equal(before.state.paused, true);
-  assert.equal(before.economy.payoutsEnabled, false);
 
   // Observe the real five-second checkpoint interval; no injected state/time.
   await delay(6000);
@@ -280,7 +277,6 @@ try {
     before.players.map((p) => p.id),
   );
   assert.deepEqual(comparable(after), comparable(before));
-  assert.equal(after.economy.payoutsEnabled, false);
   report.checks.push({
     name: "Graceful restart restores the same seat, station, worker, resources and paused clock",
     passed: true,

@@ -32,7 +32,7 @@ Provision Farfield separately from Phlox:
 - Dedicated Farfield VM, disk, public IP, firewall/security group and backup schedule; dedicated VPC when using EC2.
 - Dedicated DNS records for the two Farfield hostnames; no changes to Phlox records, services or shared ingress rules.
 - Farfield-specific resource names/tags, deployment identity, runtime permissions and cost tracking. The game container needs no AWS credentials.
-- Dedicated private backup destination and narrowly scoped access. Keep snapshots, wallet configuration and any future referee secrets separate.
+- Dedicated private backup destination and narrowly scoped access. Keep snapshots, wallet configuration and cloud credentials separate.
 - A deployment record naming the region, instance, public IP, commit and backup/restore procedure. Record verified live status after deployment, not merely after resource creation.
 
 A shared AWS account with separate resources is **resource isolation**, not an account-level security or billing boundary. A separate AWS account provides a stronger boundary if that becomes necessary. See [AWS account isolation guidance](https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/benefits-of-using-multiple-aws-accounts.html).
@@ -84,7 +84,7 @@ npm run build
 
 Publish the contents of `games/farfield/.friendsdk/` at the frontend's root, with correct MIME types and HTTPS. Keep `game.html` and its assets accessible on that same frontend origin; do not move the sandbox to the API domain. Avoid a blanket SPA fallback that rewrites missing script requests to HTML. Set a short/no-cache policy on HTML so releases do not keep booting old builds; the bundled files are not content-hashed filenames, so do not use year-long immutable caching without a version-aware cache policy.
 
-Run `dist/server.mjs` as a continuously running service with `FARFIELD_ALLOWED_ORIGINS=https://game.example.com`, `FARFIELD_STATE_PATH` pointing at private persistent storage, and `RF_WAGERS_ENABLED=false`. Keep the generated game directory available to the server as well, or use the supplied image. Route backend HTTPS to its configured `PORT` (4173 by default), and forward `/api/*` plus `/health` without caching or buffering `/api/events`.
+Run `dist/server.mjs` as a continuously running service with `FARFIELD_ALLOWED_ORIGINS=https://game.example.com`, `FARFIELD_STATE_PATH` pointing at private persistent storage. Keep the generated game directory available to the server as well, or use the supplied image. Route backend HTTPS to its configured `PORT` (4173 by default), and forward `/api/*` plus `/health` without caching or buffering `/api/events`.
 
 The frontend API origin is a **build-time setting**; changing only the server environment does not update a published client. Deploy matching frontend and server revisions together. The server allowlist uses exact origins, including scheme and any nonstandard port. Never use a wildcard to make a configuration mistake disappear. See the [self-hosting configuration and verification steps](SELF-HOSTING.md#configuration).
 
@@ -92,4 +92,4 @@ The frontend API origin is a **build-time setting**; changing only the server en
 
 Monitor HTTP health, process restarts, CPU, memory, disk space, event-stream disconnects, command latency and snapshot failures. The server has bounded room/request limits; those are protective ceilings, not advertised player capacity. Public four-browser tests establish a regression baseline, not an unlimited-user or multi-region SLA.
 
-Follow the [backup, restore and upgrade procedure](SELF-HOSTING.md#backups-restore-and-upgrades). Retain off-instance backups and periodically restore to an isolated instance before trusting recovery. A Docker volume survives container replacement but cannot survive deletion of its underlying disk without a backup. Keep RF wagering disabled until its separate deployment and verification checklist in [ESCROW.md](ESCROW.md) is completed.
+Follow the [backup, restore and upgrade procedure](SELF-HOSTING.md#backups-restore-and-upgrades). Retain off-instance backups and periodically restore to an isolated instance before trusting recovery. A Docker volume survives container replacement but cannot survive deletion of its underlying disk without a backup.

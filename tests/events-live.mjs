@@ -41,7 +41,6 @@ const child = spawn(process.execPath, ["dist/server.mjs"], {
     ...process.env,
     PORT: String(port),
     FARFIELD_STATE_PATH: filename,
-    RF_WAGERS_ENABLED: "false",
   },
   stdio: ["ignore", "ignore", "pipe"],
 });

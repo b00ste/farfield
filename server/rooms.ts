@@ -5,7 +5,6 @@ import {
   battlefieldCommand,
   advanceBattlefield,
 } from "./battlefield.ts";
-import type { Wager } from "../shared/wagers.ts";
 import { randomBytes } from "node:crypto";
 import {
   applyCommand,
@@ -19,7 +18,6 @@ import {
 import { decide } from "./arena.ts";
 export type Mode = "solo" | "pvp" | "custom" | "online";
 export type Player = {
-  wallet?: `0x${string}`;
   id: string;
   token: string;
   friendId: string;
@@ -40,7 +38,6 @@ export type Room = {
   monoliths?: import("../games/farfield/engine.ts").Monolith[];
   floor?: import("../games/farfield/engine.ts").Module[];
   hold?: { ownerId: string | null; name: string; seconds: number };
-  wager?: Wager;
   code: string;
   host: string;
   mode: Mode;
@@ -182,12 +179,6 @@ export class Rooms {
       mode: room.mode,
       selfId: own.id,
       maxPlayers: room.mode === "online" ? 2 : 4,
-      economy: {
-        kind: room.wager ? ("wager" as const) : ("practice" as const),
-        entry: room.wager ? "1" : "0",
-        payoutsEnabled: !!room.wager,
-        wager: room.wager,
-      },
       combatAt: room.combatAt,
       raidReadyAt: own.raidReadyAt,
       winnerId: room.winnerId,
@@ -262,8 +253,6 @@ export class Rooms {
       current.state.log.unshift("You forfeited this match.");
       this.settle(room);
     } else if (command.type === "start") {
-      if (room.wager)
-        throw new Error("Both escrow deposits must confirm before launch.");
       if (room.players.length < 2)
         throw new Error(
           "Invite at least one rival before launching multiplayer.",
@@ -384,54 +373,30 @@ export class Rooms {
     room.players.push(bot);
     positionPlayers(room);
   }
-  matchmake(
-    friendId: string,
-    now = Date.now(),
-    wager?: Wager,
-    wallet?: `0x${string}`,
-  ) {
+  matchmake(friendId: string, now = Date.now()) {
     this.clean(now);
     for (const room of this.rooms.values()) {
       if (
         room.mode !== "online" ||
-        !!room.wager !== !!wager ||
         room.players.length !== 1 ||
         room.players[0].state.phase !== "ready" ||
         now - room.players[0].lastSeen > 8000
       )
         continue;
-      if (
-        room.players[0].friendId === friendId ||
-        (wallet &&
-          room.players[0].wallet?.toLowerCase() === wallet.toLowerCase())
-      )
+      if (room.players[0].friendId === friendId)
         throw new Error("This Friend is already searching for a match.");
       const rival = player(friendId, 1, room, now);
-      rival.wallet = wallet;
       room.players.push(rival);
       positionPlayers(room);
-      if (!wager)
-        for (const p of room.players) applyCommand(p.state, { type: "start" });
+      for (const p of room.players) applyCommand(p.state, { type: "start" });
       room.touched = now;
       room.revision++;
       return { token: rival.token, ...this.view(room, rival.token, now) };
     }
-    const created = this.create(friendId, now, "normal", "online");
-    const room = this.rooms.get(created.code)!;
-    room.wager = wager;
-    room.players[0].wallet = wallet;
-    return { token: created.token, ...this.view(room, created.token, now) };
+    return this.create(friendId, now, "normal", "online");
   }
   leave(code: string, token: string, now = Date.now()) {
     const { room, player: current } = this.access(code, token, now);
-    if (
-      room.wager &&
-      room.players.length === 2 &&
-      current.state.phase === "ready"
-    )
-      throw new Error(
-        "An escrow match is assigned. Use the deposit panel to track funding and timeout refunds.",
-      );
     if (current.state.phase === "playing") {
       current.state.phase = "lost";
       current.state.integrity = 0;
@@ -444,10 +409,7 @@ export class Rooms {
     }
     current.active = false;
     current.departed = true;
-    if (
-      (!room.wager || !room.players.length) &&
-      !room.players.some((p) => !p.bot && !p.departed)
-    )
+    if (!room.players.some((p) => !p.bot && !p.departed))
       this.rooms.delete(code);
     room.revision++;
     return { left: true };

@@ -24,7 +24,6 @@ const actions = new Set([
   "matchmake",
   "leave",
   "preferences",
-  "escrow",
   "wallet",
 ]);
 let inFlight = 0;
@@ -97,15 +96,9 @@ window.addEventListener("message", async (event) => {
   }
   inFlight++;
   try {
-    if (data.action === "escrow" || data.action === "wallet") {
-      if (data.action === "escrow" && !/^0x[0-9a-fA-F]{64}$/.test(data.body.id))
-        throw new Error("Invalid escrow match.");
+    if (data.action === "wallet") {
       port.postMessage({ result: { ok: true } });
-      window.dispatchEvent(
-        data.action === "escrow"
-          ? new CustomEvent("farfield-escrow", { detail: data.body.id })
-          : new Event("farfield-wallet"),
-      );
+      window.dispatchEvent(new Event("farfield-wallet"));
       return;
     }
     if (data.action === "setup") {
@@ -192,7 +185,7 @@ window.addEventListener("message", async (event) => {
         friendId: walletUi.friendId,
         account: walletUi.account,
         chainId: walletUi.chainId!,
-        launch: { ...walletUi.launch, auth: undefined },
+        launch: { ...walletUi.launch },
       });
     if (response.ok && data.action === "leave") clearSeat();
     port.postMessage(

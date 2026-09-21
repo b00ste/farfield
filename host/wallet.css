@@ -444,23 +444,6 @@ body {
   margin-top: 18px;
   min-height: 52px;
 }
-.wager-terms {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  letter-spacing: 1px;
-  color: #a6bdae;
-  margin-bottom: 20px;
-}
-.wager-terms strong {
-  display: block;
-  font-size: 30px;
-  color: #d7dca7;
-  margin-top: 10px;
-}
-.wager-disabled {
-  width: 100%;
-}
 .landing-content > [role="alert"] {
   font-size: 12px;
   line-height: 1.5;
@@ -535,12 +518,6 @@ body {
   width: 100%;
   font-size: 12px;
   margin-top: 30px;
-}
-.title-dialog .escrow-recovery {
-  display: grid;
-  gap: 10px;
-  margin-top: 22px;
-  font-size: 12px;
 }
 .asset-loading {
   height: 100dvh;
@@ -702,95 +679,6 @@ body {
 .game-landing[data-reduced="true"] button {
   transition: none;
 }
-.escrow-dialog {
-  width: min(560px, calc(100vw - 32px));
-  max-height: calc(100dvh - 40px);
-  box-sizing: border-box;
-  overflow: auto;
-  color: #dfebd5;
-  background: #13262f;
-  border: 1px solid #749361;
-  border-radius: 10px;
-  padding: 24px;
-  font:
-    13px/1.6 ui-monospace,
-    monospace;
-}
-.escrow-dialog::backdrop {
-  background: #020b14ce;
-}
-.escrow-dialog header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.escrow-dialog h2 {
-  font:
-    28px Georgia,
-    serif;
-}
-.escrow-dialog label {
-  display: grid;
-  gap: 8px;
-}
-.escrow-dialog input {
-  width: 100%;
-  box-sizing: border-box;
-  font-size: 10px;
-  padding: 10px;
-  background: #0c1a22;
-  color: #bccfa8;
-  border: 1px solid #436055;
-}
-.escrow-dialog button {
-  padding: 12px 16px;
-  color: #d3e5bd;
-  background: #294039;
-  border: 1px solid #678357;
-  border-radius: 5px;
-  font: inherit;
-  cursor: pointer;
-}
-.escrow-dialog button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-.escrow-dialog small {
-  display: block;
-  overflow-wrap: anywhere;
-  font-size: 10px;
-  color: #a2b8b4;
-  margin: 10px 0;
-}
-.escrow-dialog .escrow-primary {
-  display: block;
-  margin: 18px 0;
-  width: 100%;
-  background: #bbd695;
-  color: #16271c;
-  font-weight: bold;
-}
-.escrow-dialog a {
-  color: #d0e7af;
-}
-.funding-status {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  background: #1f363a;
-  border-radius: 6px;
-}
-.landing-settings .escrow-recovery {
-  display: grid;
-  gap: 8px;
-  font-size: 12px;
-}
-.escrow-recovery input {
-  width: 100%;
-  box-sizing: border-box;
-}
-
 /* Full-screen character selection: unframed sprites across the available roster. */
 .game-landing[data-commander="true"] > .landing-header,
 .game-landing[data-commander="true"] > .landing-footer {
@@ -1157,4 +1045,24 @@ body {
   .connect-hint {
     margin: 8px 0 0;
   }
+}
+
+.online-modes {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: stretch;
+  gap: 8px;
+  font-size: 12px;
+}
+.current-online-mode {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid #c4dca2;
+  border-radius: 3px;
+  background: #30483c;
+  color: #dfe9d3;
+}
+.online-modes button {
+  min-height: 44px;
 }
