@@ -98,7 +98,8 @@ This section supersedes earlier implementation notes: voluntary dismantling remo
 - [x] Verify same-tab seat recovery through wallet/Friend ownership revalidation.
 - [x] Verify optional fixed 960×640 logical submission viewport with uniform scaling.
 - [x] Complete live four-Friend capture, contest, combat and shared victory checks.
-- [ ] Publish source to b00ste/farfield and submit vibeathon PR (GitHub repository and upstream fork creation permissions currently missing).
+- [x] Publish source to [b00ste/farfield](https://github.com/b00ste/farfield) and submission branch to [b00ste/rarefriends-vibeathon](https://github.com/b00ste/rarefriends-vibeathon/tree/codex/farfield-submission).
+- [ ] Open the upstream vibeathon PR. Both Coder CLI and connected GitHub app return HTTP 403 / Resource not accessible by integration for PR creation in spokesz/rarefriends-vibeathon. The committed submission README and branch are ready for manual PR creation.
 
 - [x] Touch-confirmed automatic evacuation before dismantling; separate authenticated request budgets; live practice matchmaking and full-viewport results.
 
