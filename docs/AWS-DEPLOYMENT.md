@@ -113,3 +113,11 @@ Release `63dddd4d4c6c98a1d1d7bc629b465ef80c8574f8` (build `5d0dfa275f2b1845`) an
 Image: `sha256:bfe5c84a6399f9d10af53353735c0360ab7fe5a0e48a2310f81a2b44d6f4c731`. HTTPS/API and containers are healthy; all three existing rooms and human seats were retained. The private RPC remained unchanged, runtime/snapshot permissions remain `0600`, and backup succeeded. No infrastructure or Phlox changes. Evidence: `artifacts/aws-release-63dddd4d.json`.
 
 Exact-build public browser checks passed landscape corner/context placement and tablet input-mode hints, with zero page errors. With the Friend explicitly idle and no workers, alloy and energy remained unchanged over four game seconds. Test rooms were left. Evidence: `artifacts/landscape-hud-production.json` and `artifacts/keyboard-hints-production.json`.
+
+## Station power and production balance
+
+Release `2cb2fffe771f5396b1eb11f72561fecfa0710e1c` (build `0c0d663825e6c55f`) lowers miner/engineer output and introduces electricity upkeep with immediate building shutdown at zero energy. Reactors and manual recovery work remain available, and AI scales its grid and handles outages. Source PR #5 is merged. Both [push CI](https://github.com/b00ste/farfield/actions/runs/35628921533) and [PR CI](https://github.com/b00ste/farfield/actions/runs/35628995590) passed 142 tests plus process/container recovery checks.
+
+Image: `sha256:4ff5c85972f48e82d781dbb2bc06c30325bf67b583df64541fbb148b1d87c0e0`. Frontend HTTPS, API and containers are healthy. Both existing rooms and human seats were retained; private RPC configuration was unchanged, runtime/snapshot permissions remain `0600`, and backup succeeded. No infrastructure or Phlox changes. Evidence: `artifacts/aws-release-2cb2fffe.json`.
+
+Public browser verification asserted this exact build and passed the normal-resource blackout/recovery flow: recruitment paused at zero power, Friend reactor work restored power, and the same recruit completed without another charge. Phone landscape/portrait and tablet HUD, Workers and building upkeep controls fit without overflow. Zero page errors; the test room was left. Evidence: `artifacts/power-browser-production.json` and `power-*-production.png`.

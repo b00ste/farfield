@@ -110,7 +110,7 @@ TEST_URL=https://4173--main--ai-dev-01--daniel.kethalia.com npm run test:browser
 TEST_URL=https://4173--main--ai-dev-01--daniel.kethalia.com npm run test:walletconnect
 ```
 
-The current browser suites are `tests/submission-browser.mjs`, `tests/touch-browser.mjs`, `tests/combat-browser.mjs` and `tests/live-four-player.mjs`. Older dashboard-specific suites remain as historical fixtures and their selectors are superseded. Wallet/RPC/artwork mocks run only inside browser tests, never in the public application. See [validation](docs/VALIDATION.md) and [workspace handoff](docs/BROWSER_HANDOFF.md).
+The current browser suites are `tests/submission-browser.mjs`, `tests/touch-browser.mjs`, `tests/combat-browser.mjs`, `tests/power-browser.mjs` (`npm run test:power`) and `tests/live-four-player.mjs`. Older dashboard-specific suites remain as historical fixtures and their selectors are superseded. Wallet/RPC/artwork mocks run only inside browser tests, never in the public application. See [validation](docs/VALIDATION.md) and [workspace handoff](docs/BROWSER_HANDOFF.md).
 
 ## Architecture and limitations
 
