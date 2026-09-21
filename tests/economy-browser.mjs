@@ -140,6 +140,11 @@ try {
   const layout = await frame.evaluate(() => ({
     width: innerWidth,
     body: document.body.scrollWidth,
+    statusTop: document.querySelector(".sector-status").getBoundingClientRect()
+      .top,
+    hudBottom: document
+      .querySelector(".flight-resources")
+      .getBoundingClientRect().bottom,
     hud: (() => {
       const r = document
         .querySelector(".flight-resources")
@@ -154,6 +159,10 @@ try {
   assert.ok(
     layout.body <= 320 && layout.hud.x >= 0 && layout.hud.right <= 320,
     "320px food/queue HUD fits viewport",
+  );
+  assert.ok(
+    layout.statusTop >= layout.hudBottom + 2,
+    "status line clears resource bar",
   );
   assert.ok(
     layout.crew.scroll <= layout.crew.client + 1,
@@ -240,7 +249,7 @@ try {
   );
   const balance = await game.getByTestId("crew-food-balance").innerText();
   assert.match(balance, /0\.65\/s upkeep/);
-  assert.match(balance, /5\/6 beds/);
+  assert.match(await game.locator(".drawer-heading").innerText(), /5\/6/);
   report.checks.push(
     "Five workers consume0.65 food/s; zero-food shortage ramps and HUD reports reduced effectiveness",
   );
