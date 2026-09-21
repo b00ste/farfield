@@ -1541,3 +1541,6 @@
     bottom: calc(max(84px, calc(env(safe-area-inset-bottom) + 78px)) + 108px);
   }
 }
+
+.flight-resources .food-flow { display: block; font-size: 8px; line-height: 1.1; font-weight: normal; color: #a9cba3; }
+.flight-resources .food-flow[data-negative="true"], .flight-resources button[data-shortage="true"] strong { color: #eea090; }

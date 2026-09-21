@@ -86,19 +86,33 @@ export function StationMap({
     const insetX = Math.min(24, rect.width / 8);
     const insetY = Math.min(96, rect.height / 4);
     // Keep the entire piece visible, including on a phone zoomed far in.
-    setCameraZoom(Math.min(
-      camera.current.zoom,
-      (rect.width - 2 * insetX) / (24 * (width + 1)),
-      (rect.height - 2 * insetY) / (24 * (height + 1)),
-    ));
+    setCameraZoom(
+      Math.min(
+        camera.current.zoom,
+        (rect.width - 2 * insetX) / (24 * (width + 1)),
+        (rect.height - 2 * insetY) / (24 * (height + 1)),
+      ),
+    );
     const size = 24 * camera.current.zoom;
     const minX = Math.ceil(camera.current.x - (rect.width / 2 - insetX) / size);
-    const maxX = Math.floor(camera.current.x + (rect.width / 2 - insetX) / size - width);
-    const minY = Math.ceil(camera.current.y - (rect.height / 2 - insetY) / size);
-    const maxY = Math.floor(camera.current.y + (rect.height / 2 - insetY) / size - height);
+    const maxX = Math.floor(
+      camera.current.x + (rect.width / 2 - insetX) / size - width,
+    );
+    const minY = Math.ceil(
+      camera.current.y - (rect.height / 2 - insetY) / size,
+    );
+    const maxY = Math.floor(
+      camera.current.y + (rect.height / 2 - insetY) / size - height,
+    );
     const center = {
-      x: Math.max(minX, Math.min(maxX, Math.floor(camera.current.x - width / 2))),
-      y: Math.max(minY, Math.min(maxY, Math.floor(camera.current.y - height / 2))),
+      x: Math.max(
+        minX,
+        Math.min(maxX, Math.floor(camera.current.x - width / 2)),
+      ),
+      y: Math.max(
+        minY,
+        Math.min(maxY, Math.floor(camera.current.y - height / 2)),
+      ),
     };
     const occupied = new Set(
       [
@@ -132,7 +146,14 @@ export function StationMap({
       return !error || error === "Not enough alloy.";
     });
     latest.current.onPreview(position ?? center);
-  }, [placing, blueprint?.type, blueprint?.shape, blueprint?.rotation, ghost, disabled]);
+  }, [
+    placing,
+    blueprint?.type,
+    blueprint?.shape,
+    blueprint?.rotation,
+    ghost,
+    disabled,
+  ]);
   const lastSpawn = useRef("");
   useEffect(() => {
     if (!state.spawn) return;
@@ -296,7 +317,9 @@ export function StationMap({
             camera.current,
           );
           const grabPreview =
-            !disabled && placing && ghost &&
+            !disabled &&
+            placing &&
+            ghost &&
             (e.pointerType === "touch" || e.pointerType === "pen") &&
             rotated(ghost.shape, ghost.rotation).some(
               (p) => ghost.x + p.x === point.x && ghost.y + p.y === point.y,
@@ -383,7 +406,10 @@ export function StationMap({
           const d = drag.current;
           if (!d || d.pointerId !== e.pointerId) return;
           drag.current = null;
-          d.distance = Math.max(d.distance, Math.hypot(e.clientX - d.x, e.clientY - d.y));
+          d.distance = Math.max(
+            d.distance,
+            Math.hypot(e.clientX - d.x, e.clientY - d.y),
+          );
           if (disabled || e.button !== 0) return;
           if (d.distance > 5) {
             if (d.preview && placing)

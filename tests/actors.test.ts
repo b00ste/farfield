@@ -92,6 +92,12 @@ test("helpers spawn at the core and only produce after walking to their own work
     }),
     null,
   );
+  assert.equal(
+    s.workers.length,
+    0,
+    "recruitment reserves a slot before spawning",
+  );
+  advance(s, 6);
   const worker = s.workers[0];
   assert.equal(worker.x, -1);
   assert.equal(worker.y, -1);
@@ -117,7 +123,7 @@ test("a recruited builder can finish work while the Friend is stopped", () => {
   assert.equal(applyCommand(s, { type: "recruit", role: "builders" }), null);
   build(s, "solar");
   applyCommand(s, { type: "stop-friend" });
-  advance(s, 8);
+  advance(s, 14);
   assert.equal(s.modules[1].progress, 1);
   assert.equal(s.friend.task, "idle");
   assert.equal(s.roles.builders, 1);
@@ -257,7 +263,7 @@ test("connected blueprints queue ahead and are built from reachable floors in or
       /Finish/,
     );
     if (builder) applyCommand(s, { type: "stop-friend" });
-    for (let i = 0; i < 250; i++) {
+    for (let i = 0; i < 320; i++) {
       tick(s, 0.1);
       const floor = new Set(
         s.modules
@@ -279,6 +285,7 @@ test("recalling and reassigning a mobile guard clears its previous squad order",
     build(s, "turret");
     advance(s, 5);
     assert.equal(applyCommand(s, { type: "recruit", role: "guards" }), null);
+    advance(s, 6);
     const guard = s.workers[0];
     guard.stance = stance;
     guard.defendAt = { x: -1, y: -1 };
@@ -308,7 +315,7 @@ test("workers clearing a dismantled building cannot be reassigned before reachin
   build(s, "garden");
   advance(s, 5);
   assert.equal(applyCommand(s, { type: "recruit", role: "farmers" }), null);
-  advance(s, 4);
+  advance(s, 10);
   const garden = s.modules[1];
   s.modules.push({
     id: 99,

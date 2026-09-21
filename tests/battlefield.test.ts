@@ -416,6 +416,7 @@ test("guards follow on flooring, hold a position, and can return to staff turret
     owner: p.id,
   });
   assert.equal(applyCommand(s, { type: "recruit", role: "guards" }), null);
+  for (let step = 0; step < 60; step++) tick(s, 0.1);
   assert.equal(
     rooms.command(a.code, a.token, { type: "guards", stance: "follow" }, 1000)
       .state.workers[0].stance,

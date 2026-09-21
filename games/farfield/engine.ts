@@ -1,4 +1,17 @@
 import {
+  RECRUIT_SECONDS,
+  MAX_RECRUIT_QUEUE,
+  WORKER_FOOD_UPKEEP,
+  FOOD_SHORTAGE_SECONDS,
+} from "./economy.ts";
+export {
+  RECRUIT_SECONDS,
+  MAX_RECRUIT_QUEUE,
+  WORKER_FOOD_UPKEEP,
+  FOOD_SHORTAGE_SECONDS,
+  workerEfficiency,
+} from "./economy.ts";
+import {
   createActor,
   assignedRoles,
   housing,
@@ -8,6 +21,7 @@ import {
   updateActors,
   workplace,
   workPower,
+  defenseEfficiency,
   type Actor,
   type Worker,
 } from "./actors.ts";
@@ -216,7 +230,15 @@ export type ResourceNode = Point & {
   resource: "alloy" | "energy" | "food";
   amount: number;
 };
+export type RecruitOrder = {
+  id: number;
+  role: Role;
+  moduleId: number | null;
+  progress: number;
+};
 export type State = {
+  recruitQueue?: RecruitOrder[];
+  foodShortage?: number;
   combatModes?: {
     friend: "aggressive" | "peaceful";
     workers: "aggressive" | "peaceful";
@@ -306,6 +328,7 @@ export type Command =
     }
   | { type: "assign"; role: Role; delta: number }
   | { type: "recruit"; role: Role; moduleId?: number }
+  | { type: "cancel-recruit"; id: number }
   | { type: "direct"; x: number; y: number; task?: "work" | "move" | "repair" }
   | { type: "stop-friend" | "forfeit" }
   | { type: "bot-add"; difficulty: Difficulty }
@@ -328,6 +351,8 @@ export function createState(
   difficulty: Difficulty = "normal",
 ): State {
   const state: State = {
+    recruitQueue: [],
+    foodShortage: 0,
     combatModes: { friend: "aggressive", workers: "peaceful" },
     difficulty,
     deposits: [],
@@ -553,6 +578,58 @@ export function placementError(
 function log(s: State, text: string) {
   s.log = [text, ...s.log].slice(0, 5);
 }
+export function recruitmentError(
+  s: State,
+  role: Role,
+  moduleId?: number,
+): string | null {
+  if (
+    !ROLES.includes(role) ||
+    (moduleId !== undefined && !Number.isSafeInteger(moduleId))
+  )
+    return "Choose a worker job.";
+  if ((s.recruitQueue?.length ?? 0) >= MAX_RECRUIT_QUEUE)
+    return "Recruitment queue is full.";
+  if (s.workers.length + (s.recruitQueue?.length ?? 0) >= housing(s))
+    return "No worker beds available. Build Quarters for four more.";
+  if (!workplace(s, role, moduleId))
+    return "Build a completed workplace with a free slot for this worker.";
+  if (s.alloy < 6 || s.food < 8)
+    return "Recruiting a worker needs 6 alloy and 8 food.";
+  return null;
+}
+function advanceRecruitment(s: State, dt: number) {
+  const queue = (s.recruitQueue ??= []);
+  const next = queue[0];
+  if (!next) return;
+  next.progress = Math.min(1, next.progress + dt / RECRUIT_SECONDS);
+  if (next.progress < 1 - 1e-9 || s.workers.length >= housing(s)) return;
+  queue.shift();
+  const destination = workplace(s, next.role, next.moduleId ?? undefined);
+  const role = destination ? next.role : "builders";
+  const worker: Worker = {
+    ...createActor(),
+    ...(s.spawn ?? {}),
+    hp: 60,
+    maxHp: 60,
+    id: next.id,
+    role,
+  };
+  resetOrder(
+    worker,
+    role === "builders" ? null : destination!.id,
+    "work",
+    role === "builders"
+      ? null
+      : destination!.cells[worker.id % destination!.cells.length],
+  );
+  s.workers.push(worker);
+  assignedRoles(s);
+  log(
+    s,
+    `A ${role === "builders" ? "builder" : role.slice(0, -1)} arrived at the core.`,
+  );
+}
 export function applyCommand(
   s: State,
   c: Command,
@@ -762,43 +839,29 @@ export function applyCommand(
     s.friend.task = "idle";
     return null;
   }
+  if (c.type === "cancel-recruit") {
+    const index = s.recruitQueue?.findIndex((order) => order.id === c.id) ?? -1;
+    if (!Number.isSafeInteger(c.id) || index < 0)
+      return "Choose a queued worker.";
+    s.recruitQueue!.splice(index, 1);
+    s.alloy += 6;
+    s.food += 8;
+    log(s, "Recruitment canceled. 6 alloy and 8 food returned.");
+    return null;
+  }
   if (c.type === "recruit") {
-    if (
-      !ROLES.includes(c.role) ||
-      (c.moduleId !== undefined && !Number.isSafeInteger(c.moduleId))
-    )
-      return "Choose a worker job.";
-    if (s.crew >= housing(s))
-      return "No worker beds available. Build Quarters for four more.";
-    const destination = workplace(s, c.role, c.moduleId);
-    if (!destination)
-      return "Build a completed workplace with a free slot for this worker.";
-    if (s.alloy < 6 || s.food < 8)
-      return "Recruiting a worker needs 6 alloy and 8 food.";
+    const error = recruitmentError(s, c.role, c.moduleId);
+    if (error) return error;
+    const destination = workplace(s, c.role, c.moduleId)!;
     s.alloy -= 6;
     s.food -= 8;
-    const worker: Worker = {
-      ...createActor(),
-      ...(s.spawn ?? {}),
-      hp: 60,
-      maxHp: 60,
+    (s.recruitQueue ??= []).push({
       id: s.nextId++,
       role: c.role,
-    };
-    resetOrder(
-      worker,
-      c.role === "builders" ? null : destination.id,
-      "work",
-      c.role === "builders"
-        ? null
-        : destination.cells[worker.id % destination.cells.length],
-    );
-    s.workers.push(worker);
-    assignedRoles(s);
-    log(
-      s,
-      `A ${c.role === "builders" ? "builder" : c.role.slice(0, -1)} arrived at the core.`,
-    );
+      moduleId: c.role === "builders" ? null : destination.id,
+      progress: 0,
+    });
+    log(s, "Worker queued · 6 seconds per recruit.");
     return null;
   }
   if (c.type === "assign") {
@@ -848,13 +911,13 @@ export function applyCommand(
   return "Unknown command.";
 }
 export function rates(s: State) {
-  const efficiency = s.food > 0 ? 1 : 0.35;
   return {
     alloy:
-      (0.12 + workPower(s, "miners") * 0.55 + workPower(s, "salvage") * 0.35) *
-      efficiency,
+      0.12 + workPower(s, "miners") * 0.55 + workPower(s, "salvage") * 0.35,
     energy: 0.25 + workPower(s, "engineers") * 0.7,
-    food: workPower(s, "farmers") * 0.8 - (s.crew + 1) * 0.045,
+    food:
+      workPower(s, "farmers") * 0.8 -
+      s.workers.filter((w) => w.hp > 0).length * WORKER_FOOD_UPKEEP,
   };
 }
 export function tick(s: State, dt: number, otherActors: Actor[] = []) {
@@ -864,6 +927,7 @@ export function tick(s: State, dt: number, otherActors: Actor[] = []) {
   s.time += dt;
   s.shots = [];
   updateActors(s, dt);
+  advanceRecruitment(s, dt);
   for (const m of s.modules.filter((m) => m.dismantling))
     applyCommand(s, { type: "demolish", moduleId: m.id }, m.owner, otherActors);
   if (s.friend.working && s.friend.order === "gather") {
@@ -905,13 +969,23 @@ export function tick(s: State, dt: number, otherActors: Actor[] = []) {
   const r = rates(s);
   s.alloy = Math.min(Math.max(300, s.alloy), s.alloy + r.alloy * dt);
   s.energy = Math.min(Math.max(300, s.energy), s.energy + r.energy * dt);
-  s.food = Math.max(0, Math.min(300, s.food + r.food * dt));
+  s.food = Math.max(0, Math.min(Math.max(300, s.food), s.food + r.food * dt));
+  const shortage = s.foodShortage ?? 0;
+  s.foodShortage = Math.max(
+    0,
+    Math.min(
+      1,
+      shortage +
+        ((s.food <= 0 && s.workers.some((worker) => worker.hp > 0) ? 1 : -1) *
+          dt) /
+          FOOD_SHORTAGE_SECONDS,
+    ),
+  );
   const pending = s.modules.filter((m) => m.progress < 1);
   for (const m of pending) {
     m.progress = Math.min(
       1,
-      m.progress +
-        dt * workPower(s, "build", m.id) * 0.16 * (s.food > 0 ? 1 : 0.35),
+      m.progress + dt * workPower(s, "build", m.id) * 0.16,
     );
     if (m.progress >= 1) {
       log(s, `${MODULES[m.type].name} online.`);
@@ -949,7 +1023,7 @@ export function tick(s: State, dt: number, otherActors: Actor[] = []) {
       .filter((e) => e.hp > 0 && dist(e, from) < 8)
       .sort((a, b) => dist(a, from) - dist(b, from))[0];
     if (target) {
-      target.hp -= guard * 9 * dt;
+      target.hp -= guard * defenseEfficiency(s, turrets[i].id) * 9 * dt;
       s.energy -= dt * 0.5;
       s.shots.push({ from, to: { x: target.x, y: target.y } });
     }

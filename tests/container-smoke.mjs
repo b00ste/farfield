@@ -80,6 +80,8 @@ function comparable(view) {
     food,
     modules,
     workers,
+    recruitQueue,
+    foodShortage,
     friend,
     crew,
     time,
@@ -92,6 +94,8 @@ function comparable(view) {
     food,
     modules,
     workers,
+    recruitQueue,
+    foodShortage,
     friend,
     crew,
     time,
@@ -217,7 +221,8 @@ try {
   await command({ type: "recruit", role: "builders" });
   const before = await command({ type: "pause" });
   assert.equal(before.state.modules.length, 2);
-  assert.equal(before.state.workers.length, 1);
+  assert.equal(before.state.workers.length, 0);
+  assert.equal(before.state.recruitQueue.length, 1);
   assert.equal(before.state.paused, true);
 
   // Observe the real five-second checkpoint interval; no injected state/time.
@@ -278,7 +283,7 @@ try {
   );
   assert.deepEqual(comparable(after), comparable(before));
   report.checks.push({
-    name: "Graceful restart restores the same seat, station, worker, resources and paused clock",
+    name: "Graceful restart restores the same seat, station, recruitment queue, resources and paused clock",
     passed: true,
   });
 } catch (error) {

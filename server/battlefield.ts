@@ -1,3 +1,4 @@
+import { workerEfficiency } from "../games/farfield/economy.ts";
 import { ABILITIES, COMBAT } from "../games/farfield/combat.ts";
 import {
   applyCommand,
@@ -10,6 +11,7 @@ import {
 } from "../games/farfield/engine.ts";
 import {
   assignedRoles,
+  defenseEfficiency,
   ROLE_NAMES,
   resetOrder,
   routeTo,
@@ -570,9 +572,8 @@ export function advanceBattlefield(room: Room, dt: number) {
       const unitDamage =
         a === s.friend
           ? COMBAT.friendDamage
-          : "role" in a && a.role === "guards"
-            ? COMBAT.guardDamage
-            : 3;
+          : ("role" in a && a.role === "guards" ? COMBAT.guardDamage : 3) *
+            workerEfficiency(s);
       const target = enemyUnits
         .filter(
           ({ a: e, o }) =>
@@ -666,7 +667,7 @@ export function advanceBattlefield(room: Room, dt: number) {
         m.cells.some((t) => distance(t, a) <= 5),
       );
       if (target) {
-        hit(target.a, COMBAT.turretDamage * dt, p);
+        hit(target.a, COMBAT.turretDamage * defenseEfficiency(s, m.id) * dt, p);
         s.shots.push({
           from: m.cells[0],
           to: { x: target.a.x, y: target.a.y },

@@ -123,12 +123,17 @@ try {
     { code: seat.code, command: { type: "recruit", role: "builders" } },
     seat.token,
   );
-  const expectedCrew = changed.state.crew;
+  const recruitId = changed.state.recruitQueue.at(-1).id;
+  const containsRecruit = (state) =>
+    [...(state?.recruitQueue ?? []), ...(state?.workers ?? [])].filter(
+      (entry) => entry.id === recruitId,
+    ).length === 1;
   for (let n = 0; n < 80; n++) {
     const snapshot = JSON.parse(await readFile(filename, "utf8"));
     if (
-      snapshot.rooms.find((r) => r.code === seat.code)?.players[0].state
-        .crew === expectedCrew
+      containsRecruit(
+        snapshot.rooms.find((r) => r.code === seat.code)?.players[0].state,
+      )
     )
       break;
     if (n === 79) throw Error("Periodic checkpoint did not persist command");
@@ -140,7 +145,10 @@ try {
   await ready();
   view = await api("sync", { code: seat.code, active: false }, seat.token);
   assert.equal(view.selfId, seat.selfId);
-  assert.equal(view.state.crew, expectedCrew);
+  assert.ok(
+    containsRecruit(view.state),
+    "queued recruit survives crash exactly once",
+  );
   assert.equal(view.players.length, 2, "recovery must not duplicate seats");
   child.kill("SIGTERM");
   assert.equal((await exited).code, 0);

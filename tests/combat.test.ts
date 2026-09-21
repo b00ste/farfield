@@ -11,6 +11,7 @@ import {
 } from "../games/farfield/actors.ts";
 import {
   applyCommand,
+  tick,
   createState,
   MODULES,
   type Module,
@@ -43,8 +44,11 @@ test("buildings use alloy only and Quarters allow recruitment beyond 24", () => 
     });
   assert.equal(housing(s), 30);
   s.alloy = s.food = 1000;
-  for (let i = 0; i < 30; i++)
+  s.attackWaves = false;
+  for (let i = 0; i < 30; i++) {
     assert.equal(applyCommand(s, { type: "recruit", role: "builders" }), null);
+    for (let step = 0; step < 60; step++) tick(s, 0.1);
+  }
   assert.equal(s.workers.length, 30);
   assert.match(
     applyCommand(s, { type: "recruit", role: "builders" })!,
@@ -400,6 +404,7 @@ test("peaceful Friend stops automatic combat, explicit attacks still work, new w
   );
   // Recruit at the local core, move onto the fixture floor to test inherited behavior.
   rooms.command(a.code, a.token, { type: "recruit", role: "builders" }, 1000);
+  for (let step = 0; step < 60; step++) tick(p.state, 0.1);
   Object.assign(p.state.workers[0], { x: 0, y: 0 });
   rooms.advance(0.1, 1000);
   assert.ok(p.state.workers[0].attack);

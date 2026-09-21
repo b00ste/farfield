@@ -15,6 +15,8 @@ import {
 import {
   createState,
   nextObjective,
+  rates,
+  recruitmentError,
   MODULES,
   rotated,
   placementError,
@@ -388,6 +390,9 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
   );
   const state = room?.state || empty,
     halted = paused || !!panel || offline;
+  const foodNet = rates(state).food;
+  const foodShortage = state.foodShortage ?? 0;
+  const recruitQueue = state.recruitQueue ?? [];
   useEffect(() => {
     if (halted || state.paused || state.phase !== "playing")
       clearPendingOrders();
@@ -821,11 +826,26 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
             <small>ENERGY</small>
           </button>
           <button
-            title="Food feeds and recruits workers"
-            onClick={() => setPanel("help")}
+            title={`Food balance ${foodNet >= 0 ? "+" : ""}${foodNet.toFixed(2)}/s. One farmer feeds about six workers.`}
+            aria-label="Food balance and workers"
+            data-shortage={foodShortage > 0}
+            onClick={() => {
+              setDrawer(drawer === "crew" ? null : "crew");
+              focusLevel();
+            }}
           >
             <span className="food">♧</span>
-            <strong>{Math.floor(state.food)}</strong>
+            <strong>
+              {Math.floor(state.food)}
+              <b
+                className="food-flow"
+                data-testid="food-flow"
+                data-negative={foodNet < 0}
+              >
+                {foodNet >= 0 ? "+" : ""}
+                {foodNet.toFixed(1)}/s
+              </b>
+            </strong>
             <small>FOOD</small>
           </button>
           <button
@@ -838,7 +858,10 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
             <span>♙</span>
             <strong>
               {state.crew}
-              <i>/{housing(state)}</i>
+              <i>
+                /{housing(state)}
+                {recruitQueue.length > 0 ? ` +${recruitQueue.length}` : ""}
+              </i>
             </strong>
             <small>WORKERS</small>
           </button>
@@ -996,6 +1019,11 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
               : `FRIEND ${Math.ceil(state.friend.hp)}/${state.friend.maxHp}`}
           </span>
           <span>{clock(state.time)}</span>
+          {foodShortage > 0 && (
+            <span className="danger" data-testid="food-shortage">
+              FOOD LOW · {Math.round((1 - foodShortage * 0.5) * 100)}%
+            </span>
+          )}
         </div>
       )}
       {state.phase === "playing" && (
@@ -1472,9 +1500,11 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                         disabled={
                           halted ||
                           busy ||
-                          state.crew >= housing(state) ||
-                          state.alloy < 6 ||
-                          state.food < 8
+                          !!recruitmentError(
+                            state,
+                            inspectedRole ?? "builders",
+                            inspectedRole ? inspected!.id : undefined,
+                          )
                         }
                         onClick={() =>
                           void command({
@@ -1485,8 +1515,8 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                               : {}),
                           })
                         }
-                        aria-label={`Recruit ${ROLE_NAMES[inspectedRole ?? "builders"].toLowerCase()} — 6 alloy, 8 food`}
-                        title={`Recruit ${ROLE_NAMES[inspectedRole ?? "builders"].toLowerCase()} — 6 alloy, 8 food`}
+                        aria-label={`Recruit ${ROLE_NAMES[inspectedRole ?? "builders"].toLowerCase()} — 6 alloy, 8 food, 6 seconds`}
+                        title={`Recruit ${ROLE_NAMES[inspectedRole ?? "builders"].toLowerCase()} — 6 alloy, 8 food, 6 seconds`}
                       >
                         <ActionIcon kind="recruit" />
                       </button>

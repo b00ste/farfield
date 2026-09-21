@@ -91,6 +91,7 @@ test("roles conserve crew and require completed capacity", () => {
   );
   advance(s, 5);
   assert.equal(applyCommand(s, { type: "recruit", role: "builders" }), null);
+  advance(s, 6);
   assert.equal(
     applyCommand(s, { type: "assign", role: "farmers", delta: 1 }),
     null,
@@ -128,9 +129,11 @@ test("quarters add worker beds without automatically spawning helpers", () => {
   const food = s.food,
     alloy = s.alloy;
   assert.equal(applyCommand(s, { type: "recruit", role: "builders" }), null);
-  assert.equal(s.crew, 1);
+  assert.equal(s.crew, 0);
   assert.equal(s.food, food - 8);
   assert.equal(s.alloy, alloy - 6);
+  advance(s, 6);
+  assert.equal(s.crew, 1);
 });
 test("pause stops time, resources, attacks, construction, and rejects builds", () => {
   const s = createState();
@@ -301,6 +304,7 @@ test("opening starts with only a core and guides production before combat", () =
   advance(s, 5);
   assert.equal(nextObjective(s).role, "miners");
   assert.equal(applyCommand(s, { type: "recruit", role: "miners" }), null);
+  advance(s, 6);
   assert.equal(nextObjective(s).module, "solar");
   advance(s, 110);
   assert.equal(s.wave, 0);
