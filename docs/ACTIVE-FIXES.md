@@ -177,3 +177,15 @@ Released on `farfield.fun` as build `c3fad9100bb38e60` from `92b0818`; source PR
 Validation: 124 tests passed, including queued/walking/on-site labor, unassignment, dismantling and Friend-operation regressions. Browser Testing passed 15 viewport/dock combinations and keyboard/touch switching, including editable-field exclusion. Evidence: `artifacts/landscape-hud-candidate.json` and `artifacts/keyboard-hints-candidate.json`. Source PR #4 is merged; production release `63dddd4`, build `5d0dfa275f2b1845`.
 
 Public checks on the exact release passed: 932×430 landscape corners sit 12px above the bottom in emulation, selected-building controls fit without overlap, tablet key/touch/input behavior is correct, and a four-second idle interval produced zero alloy and energy. Zero page errors; test rooms were left. Evidence: `artifacts/landscape-hud-production.json` and `artifacts/keyboard-hints-production.json`. Physical Safari safe areas and hardware keyboard handoff remain on the device checklist.
+
+## Alloy scaling and building electricity upkeep
+
+- [x] Reduced miner output to 0.30 alloy/s and engineer output to 0.45 energy/s. Manual core salvage is 0.15 alloy/s per work power so the core does not outperform a Foundry.
+- [x] Completed buildings and passages consume electricity, even when idle. Blueprints, wreckage and dismantling modules consume none; construction still costs alloy only.
+- [x] At zero energy, production, recruitment, turrets, healing and research bonuses stop immediately. Reactors, movement, manual construction/repair and core salvage remain available. Beds and paths persist.
+- [x] Net electricity and power-off feedback appear in the HUD; Workers explains supply and demand, and the building picker shows upkeep. Powered-off jobs stop emitting production animations.
+- [x] Recruitment retains its progress and paid cost through power loss/recovery. Staff can be reassigned or safe unused modules dismantled to restore a sustainable grid.
+
+Candidate browser validation used normal resources and real time: Reactor + Quarters upkeep drained stored power after two Shield uses, recruitment paused, and Friend reactor work restored power and completed the same recruit without charging twice. Phone landscape/portrait and tablet HUD/Workers/building-picker bounds passed. Evidence: `artifacts/power-browser.json`; reproducible with `npm run test:power` in Browser Testing.
+
+AI reactor staffing now scales with completed and queued buildings plus an ability reserve. Bots recover using existing workers, their Friend, new reactors, salvage, or safe dismantling when remaining labor cannot support the grid. Seven AI regressions cover expansion and severe outages; fifteen-minute simulations on Easy/Normal/Hard reached objective victories with positive energy balances. Full candidate validation passed 142 tests, typecheck, FriendSDK check and build.

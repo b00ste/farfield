@@ -1,5 +1,15 @@
 import { MODULES, type State, type Command, type Point } from "./engine.ts";
-import { TASK_LABELS } from "./actors.ts";
+import { TASK_LABELS, type Actor } from "./actors.ts";
+import { powerEfficiency } from "./economy.ts";
+const poweredTasks = new Set(["miners", "farmers", "scientists", "medics", "guards"]);
+
+/** Local workforce only: rival grid power is intentionally unknown. */
+export function workIsUnpowered(s: State, actor: Pick<Actor, "task">) {
+  return (
+    !powerEfficiency(s) &&
+    poweredTasks.has(actor.task)
+  );
+}
 
 /** Resolve only information already visible to this client; never reveal hidden targets. */
 export function attackTarget(s: State, attack = s.friend.attack) {
@@ -40,6 +50,8 @@ export function friendOrder(s: State) {
   const room = s.modules.find((m) => m.id === f.targetId);
   if (f.path.length)
     return room ? `Moving · ${MODULES[room.type].name}` : "Moving";
+  if (f.working && workIsUnpowered(s, f))
+    return room ? `Power off · ${MODULES[room.type].name}` : "Power off";
   if (f.working) return TASK_LABELS[f.task];
   const signal = s.monoliths.find(
     (m) => Math.hypot(m.x - f.x, m.y - f.y) <= 2.6,

@@ -42,25 +42,27 @@ On phones and tablets, shortcut hints stay hidden during touch play. Using a har
 - Enemy bases have no map markers. The server filters unseen tiles and units. Discovered floor remains as last-known terrain; new construction outside sight remains hidden and moving enemies vanish outside current vision. Discovery never exposes a rival's complete live state or resource totals.
 - Choose any of seven tetromino shapes. Blueprints attach to connected flooring or another queued blueprint, without overlap. Builders and the Friend finish reachable prerequisites in order. Maximum 180 commissioned modules per player.
 - The core has two worker beds; Quarters add four each, with no separate 24-worker cap. Each specialist room has two slots. The Friend supplies two work power; workers supply one after reaching their workplace. Idle builders repair a damaged core using alloy.
-- Alloy/second = `0.55 × mining power + 0.35 × core salvage power`. Energy/second = `0.7 × engineering power`. Food/second = `0.8 × farming power − 0.13 × living workers`; the Friend needs no food. One farmer supports about six workers; two staffed Garden slots support about twelve. Unstaffed production buildings generate zero; the Friend can operate them personally, and core salvage requires the Friend actively working there. Production caps at 300; refunds can overflow storage without being discarded.
+- Alloy/second = `0.30 × mining power + 0.15 × core salvage power`. Energy/second = `0.45 × engineering power − building upkeep`. Food/second = `0.8 × farming power − 0.13 × living workers`; the Friend needs no food. One farmer supports about six workers; two staffed Garden slots support about twelve. Unstaffed production buildings generate zero; the Friend can operate them personally, and core salvage requires the Friend actively working there. Production caps at 300; refunds can overflow storage without being discarded.
 - Recruitment is a serial six-second queue, capped at five pending workers. Payment and a bed are reserved immediately. Canceling refunds all 6 alloy and 8 food. Lost housing holds arrivals until a bed opens; a destroyed workplace returns its recruit to general building duty.
-- At zero food, worker mining, construction, combat and worker-staffed turret damage gradually fall to 50% over 30 seconds. They recover over 30 seconds with food. Friend abilities/work, farm production, research, healing and energy production remain available so shortages are recoverable. The food counter shows the net rate; Workers shows production, upkeep and queued recruitment.
+- At zero food, worker mining, construction, combat and worker-staffed turret damage gradually fall to 50% over 30 seconds. They recover over 30 seconds with food. Food shortage does not penalize Friend abilities/work, farms, research, healing or reactors; electricity is still required for building operations. The food counter shows the net rate; Workers shows production, upkeep and queued recruitment.
 - Blueprint progress/second = `0.16 × construction power`. No worker or Friend present means no progress.
 
 Compact icon actions (with hover help and accessible names) stay in a shallow action strip beside the Build/Workers buttons; on narrow screens swipe the strip sideways for more actions. Two icon toggles beside Shield/EMP control the Friend (single figure) and free workers (group). Crossed swords mean Aggressive; a leaf means Peaceful. Click once to switch. **Aggressive** sends unassigned builders to fight nearby visible enemies over completed flooring; **Peaceful** returns them to general construction or idle. Assigned specialists and turret staff stay at their posts in either mode. Guards explicitly ordered to follow or hold are mobile combat units. Ordinary workers deal 3 DPS; guards deal 7. Workers begin peaceful, the Friend aggressive. New workers inherit the group's setting. Direct Friend movement/attack orders take priority; staffed turrets continue defending in either mode.
 
-Buildings cost **alloy only**. Energy powers Friend abilities.
+Buildings cost **alloy only** to construct. Every completed module, including idle buildings and passages, consumes electricity. Blueprints, wreckage and dismantling modules consume none. The core uses 0.02 energy/s. Energy also powers Friend abilities.
 
-| Building | Alloy | Purpose |
-| --- | ---: | --- |
-| Passage | 4 | Extend walkable flooring |
-| Reactor | 12 | Energy production for abilities |
-| Garden | 10 | Food production |
-| Foundry | 14 | Alloy production |
-| Quarters | 14 | Four additional worker beds |
-| Defense | 16 | Staffed turret: 5-tile range, fixed 8 damage/second |
-| Research | 18 | +25% on-site decoding speed per science work power, capped at +100%; no remote captures |
-| Infirmary | 16 | One medic: 8 HP/s; two: 16 HP/s within four tiles |
+At zero energy, production, recruitment, turrets, healing and research bonuses shut off immediately. Reactors, movement, manual construction/repair and core salvage keep working; beds and paths remain available. Assign engineers or send the Friend to a reactor to restore power. Upkeep remains the station’s full demand during an outage, so generation must cover its load. The HUD shows net energy/s; Workers shows gross generation and building demand.
+
+| Building | Alloy | Energy/s upkeep | Purpose |
+| --- | ---: | ---: | --- |
+| Passage | 4 | 0.01 | Extend walkable flooring |
+| Reactor | 12 | 0.03 | Power for buildings and abilities |
+| Garden | 10 | 0.10 | Food production |
+| Foundry | 14 | 0.12 | Alloy production |
+| Quarters | 14 | 0.08 | Four additional worker beds |
+| Defense | 16 | 0.20 | Staffed turret: 5-tile range, fixed 8 damage/second |
+| Research | 18 | 0.14 | +25% on-site decoding speed per science work power, capped at +100%; no remote captures |
+| Infirmary | 16 | 0.12 | One medic: 8 HP/s; two: 16 HP/s within four tiles |
 
 | Ability | Control | Energy | Effect | Cooldown |
 | --- | --- | ---: | --- | --- |
@@ -71,11 +73,11 @@ Failed or out-of-range casts cost nothing. Red projectiles are hostile; friendly
 
 The Friend has 120 HP and deals 12 damage/second to units and 18 to selected buildings; workers have 60 HP and guards deal 7 damage/second within 2.2 tiles. Incoming unit damage resolves simultaneously. Enemy destruction pays no refund; destroyed buildings leave walkable wreckage. Select your own wreckage to clear it without a refund, or rebuild over its exact empty footprint at the normal alloy cost. Clearance and rebuilding cannot disconnect completed station paths. The core uses the displayed 100 hull as its health. Destroying it eliminates its commander. Core repairs cost 0.5 alloy/second per repair work power and restore 1.5 hull/second per power.
 
-The core heals nearby units within three tiles at 8 HP/second. An Infirmary needs living assigned medics working on site: one heals at 8 HP/second, two at 16 HP/second within four tiles; an empty Infirmary cannot heal, even with the Friend working there. Healing begins after four seconds without taking damage; overlapping healing points use the strongest rate rather than stacking. A downed Friend respawns at their surviving core after 15 seconds. Lost workers must be replaced. Flying raids are disabled, including requests from old clients.
+While powered, the core heals nearby units within three tiles at 8 HP/second. An Infirmary needs power and living assigned medics working on site: one heals at 8 HP/second, two at 16 HP/second within four tiles; an empty Infirmary cannot heal, even with the Friend working there. Healing begins after four seconds without taking damage; overlapping healing points use the strongest rate rather than stacking. A downed Friend respawns at their surviving core after 15 seconds. Lost workers must be replaced. Flying raids are disabled, including requests from old clients.
 
-A living Friend within 2.5 tiles captures a monolith in **10 seconds**, reducible to five with staffed Research. Nearby rival Friends or guards contest it and pause capture. Ownership persists after leaving. Hold all four uncontested for **60 continuous seconds** to win; an enemy capture attempt or contest resets that countdown. The other victory condition is last core standing. Ownership, contests and the countdown are public. Full-screen results name the winner and cause.
+A living Friend within 2.5 tiles captures a monolith in **10 seconds**, reducible to five with powered, staffed Research. Nearby rival Friends or guards contest it and pause capture. Ownership persists after leaving. Hold all four uncontested for **60 continuous seconds** to win; an enemy capture attempt or contest resets that countdown. The other victory condition is last core standing. Ownership, contests and the countdown are public. Full-screen results name the winner and cause.
 
-AI uses the same costs, physical construction, paths, capture and combat rules. Easy/Normal/Hard decision intervals are 6/3/1.5 seconds. Bots build an economy, recruit guards, approach shared objectives, fight visible enemies, retreat when low on health, and use the same energy/cooldown-gated abilities. AI balance remains an early-access playtest item.
+AI uses the same costs, physical construction, paths, capture and combat rules. Easy/Normal/Hard decision intervals are 6/3/1.5 seconds. Bots scale reactor staffing with current and queued building demand, recover from outages, build an economy, recruit guards, approach shared objectives, fight visible enemies, retreat when low on health, and use the same energy/cooldown-gated abilities. AI balance remains an early-access playtest item.
 
 ## Host your own game
 

@@ -10,6 +10,7 @@ import {
   type Command,
 } from "./engine.ts";
 import { ROLE_NAMES } from "./actors.ts";
+import { ENGINEER_ENERGY_RATE, powerDemand, powerEfficiency } from "./economy.ts";
 const jobs: Record<Role, string> = {
   builders: "Build queued modules",
   miners: "Alloy · Foundry",
@@ -29,10 +30,14 @@ export function Crew({
   onCommand: (c: Command) => void;
 }) {
   const queue = state.recruitQueue ?? [];
+  const powered = powerEfficiency(state) > 0;
   const recruitHint =
     recruitmentError(state, "builders") ??
-    "6 seconds each · starts as a builder";
-  const foodNet = rates(state).food;
+    (powered ? "6 seconds each · starts as a builder" : "Recruitment paused · restore power");
+  const resourceRates = rates(state);
+  const foodNet = resourceRates.food;
+  const energyNet = resourceRates.energy;
+  const energyUpkeep = powerDemand(state);
   const upkeep = state.crew * WORKER_FOOD_UPKEEP;
   const foodIncome = foodNet + upkeep;
   return (
@@ -61,9 +66,11 @@ export function Crew({
               <span>{ROLE_NAMES[entry.role]}</span>
               <small>
                 {index === 0
-                  ? entry.progress >= 1
-                    ? "Needs a bed"
-                    : `${Math.ceil((1 - entry.progress) * RECRUIT_SECONDS)}s`
+                  ? !powered
+                    ? "Needs power"
+                    : entry.progress >= 1
+                      ? "Needs a bed"
+                      : `${Math.ceil((1 - entry.progress) * RECRUIT_SECONDS)}s`
                   : "Queued"}
               </small>
               <progress
@@ -85,6 +92,22 @@ export function Crew({
           ))}
         </div>
       )}
+      <div className="crew-economy" data-testid="crew-power-balance">
+        <span>
+          ϟ +{(energyNet + energyUpkeep).toFixed(2)}/s generated · −{energyUpkeep.toFixed(2)}/s buildings
+        </span>
+        <strong className={energyNet < 0 ? "danger" : ""}>
+          {energyNet >= 0 ? "+" : ""}{energyNet.toFixed(2)}/s net
+        </strong>
+        <small>
+          Each engineer generates {ENGINEER_ENERGY_RATE.toFixed(2)}/s. Keep spare power for Shield and EMP.
+        </small>
+        {!powered && (
+          <small className="danger">
+            Power off · staff Reactors or send your Friend there. Dismantle unused buildings if demand is still too high.
+          </small>
+        )}
+      </div>
       <div className="crew-economy" data-testid="crew-food-balance">
         <span>
           ♧ +{foodIncome.toFixed(2)}/s grown · −{upkeep.toFixed(2)}/s upkeep
@@ -100,7 +123,7 @@ export function Crew({
           <small className="danger">
             Food shortage · workers and defenses at{" "}
             {Math.round((1 - (state.foodShortage ?? 0) * 0.5) * 100)}%. Farms
-            keep producing.
+            keep producing while powered.
           </small>
         )}
       </div>

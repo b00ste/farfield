@@ -5,7 +5,7 @@ import {
   MODULES,
   capacity,
   housing,
-  workPower,
+  energyProduction,
   recruitmentError,
   WORKER_FOOD_UPKEEP,
   type State,
@@ -13,7 +13,12 @@ import {
   type Role,
   type Command,
 } from "../games/farfield/engine.ts";
-import { routeBeside, routeTo } from "../games/farfield/actors.ts";
+import { routeTo } from "../games/farfield/actors.ts";
+import {
+  BUILDING_POWER_UPKEEP,
+  ENGINEER_ENERGY_RATE,
+  powerDemand,
+} from "../games/farfield/economy.ts";
 export type Rival = {
   id: string;
   name: string;
@@ -99,6 +104,139 @@ export function decide(bot: Rival, rivals: Rival[], _combatAt = 0) {
   const queued = s.recruitQueue ?? [];
   const roleTotal = (role: Role) =>
     s.roles[role] + queued.filter((entry) => entry.role === role).length;
+  // Staff for the completed station AND construction already committed. Keep a
+  // small surplus to recharge abilities rather than spending down stored power.
+  const projectedDemand =
+    powerDemand(s) +
+    s.modules.reduce(
+      (total, m) =>
+        total +
+        (m.progress < 1 && !m.wreck && !m.dismantling
+          ? BUILDING_POWER_UPKEEP[m.type]
+          : 0),
+      0,
+    );
+  const engineerTarget = Math.max(
+    1,
+    Math.ceil((projectedDemand + 0.3) / ENGINEER_ENERGY_RATE),
+  );
+  const reactors = s.modules.filter(
+    (m) => m.type === "solar" && !m.wreck && !m.dismantling,
+  );
+  const completedReactors = reactors.filter((m) => m.progress >= 1);
+  const engineeringSlots = completedReactors.length * 2;
+  const urgentPower =
+    s.energy < 12 && energyProduction(s) < powerDemand(s) + 0.05;
+  const needsMoreThanFriend =
+    (s.roles.engineers + 2) * ENGINEER_ENERGY_RATE <= powerDemand(s);
+  const powerExpansion = roleTotal("engineers") < engineerTarget;
+  const constructing = s.modules.some((m) => m.progress < 1);
+
+  // A free builder can staff an existing reactor without food, a recruitment
+  // delay, or power. During an outage, move a mobile guard off combat duty too.
+  if (
+    powerExpansion &&
+    s.roles.engineers < engineeringSlots &&
+    s.roles.builders > (constructing && !urgentPower ? 1 : 0)
+  ) {
+    if (
+      applyCommand(
+        s,
+        { type: "assign", role: "engineers", delta: 1 },
+        bot.id,
+      ) === null
+    )
+      return;
+  }
+  if (
+    urgentPower &&
+    powerExpansion &&
+    s.roles.engineers < engineeringSlots &&
+    !s.roles.builders
+  ) {
+    const spare = (
+      ["guards", "scientists", "medics", "miners", "farmers"] as Role[]
+    ).find(
+      (role) =>
+        s.roles[role] >
+        ((role === "miners" || role === "farmers") && !needsMoreThanFriend
+          ? 1
+          : 0),
+    );
+    if (
+      spare &&
+      applyCommand(s, { type: "assign", role: spare, delta: -1 }, bot.id) ===
+        null
+    ) {
+      applyCommand(s, { type: "assign", role: "engineers", delta: 1 }, bot.id);
+      return;
+    }
+  }
+  if (urgentPower && needsMoreThanFriend) {
+    // Without any extra labor, another empty reactor cannot fix the deficit.
+    // Shed nonessential load through ordinary safe dismantling first. The
+    // engine rejects bridges/occupied enemy flooring and handles evacuation.
+    if (s.crew === s.roles.engineers) {
+      const expendable = s.modules
+        .filter(
+          (m) =>
+            m.progress >= 1 &&
+            !m.wreck &&
+            !m.dismantling &&
+            m.type !== "core" &&
+            m.type !== "solar",
+        )
+        .sort(
+          (a, b) =>
+            // Preserve food/alloy workplaces until safe non-production load
+            // (including long passage extensions) has been tried first.
+            Number(a.type === "garden" || a.type === "foundry") -
+              Number(b.type === "garden" || b.type === "foundry") ||
+            BUILDING_POWER_UPKEEP[b.type] - BUILDING_POWER_UPKEEP[a.type],
+        );
+      for (const m of expendable) {
+        if (
+          applyCommand(
+            s,
+            { type: "demolish", moduleId: m.id },
+            bot.id,
+            rivals
+              .filter((other) => other !== bot)
+              .flatMap((other) => [other.state.friend, ...other.state.workers]),
+          ) === null
+        )
+          return;
+      }
+    }
+    const unfinishedReactor = reactors.find((m) => m.progress < 1);
+    if (unfinishedReactor) {
+      if (s.friend.targetId !== unfinishedReactor.id)
+        applyCommand(
+          s,
+          { type: "direct", ...unfinishedReactor.cells[0] },
+          bot.id,
+        );
+      return;
+    }
+    if (engineeringSlots < engineerTarget && !constructing) {
+      const reactor = place(s, "solar");
+      if (reactor) applyCommand(s, reactor, bot.id);
+      else applyCommand(s, { type: "direct", ...core.cells[0] }, bot.id);
+      return;
+    }
+  }
+  if (urgentPower && completedReactors.length) {
+    const reactor = completedReactors[0];
+    if (s.friend.targetId !== reactor.id || s.friend.order !== "work")
+      applyCommand(s, { type: "direct", ...reactor.cells[0] }, bot.id);
+    return;
+  }
+  if (urgentPower && !reactors.length && !constructing) {
+    const reactor = place(s, "solar");
+    if (reactor) applyCommand(s, reactor, bot.id);
+    else applyCommand(s, { type: "direct", ...core.cells[0] }, bot.id);
+    return;
+  }
   const farmerTarget = Math.max(
     1,
     Math.ceil(((s.crew + queued.length + 1) * WORKER_FOOD_UPKEEP) / 0.8),
@@ -138,12 +276,36 @@ export function decide(bot: Rival, rivals: Rival[], _combatAt = 0) {
   for (const [role, count] of [
     ["farmers", farmerTarget],
     ["miners", 1],
-    ["engineers", 1],
+    ["engineers", engineerTarget],
     ["builders", 1],
     ["guards", 2],
   ] as [Role, number][]) {
     if (roleTotal(role) < count && !recruitmentError(s, role)) {
       applyCommand(s, { type: "recruit", role }, bot.id);
+      return;
+    }
+  }
+  // Do not immediately abandon a recovery reactor for a new build at 1 energy.
+  // Staffing/recruitment above still runs so this temporary job can be handed off.
+  if (s.friend.task === "engineers" && s.energy < 35) return;
+  // Construction capacity and beds must grow along with power staffing; do
+  // this before the Friend leaves to capture an objective. Existing engineers
+  // and queued recruits prevent repeated emergency orders while they walk in.
+  if (
+    !constructing &&
+    reactors.length * 2 < engineerTarget &&
+    (reactors.length > 0 || urgentPower)
+  ) {
+    const reactor = place(s, "solar");
+    if (reactor) {
+      applyCommand(s, reactor, bot.id);
+      return;
+    }
+  }
+  if (powerExpansion && s.crew + queued.length >= housing(s) && !constructing) {
+    const quarters = place(s, "habitat");
+    if (quarters) {
+      applyCommand(s, quarters, bot.id);
       return;
     }
   }

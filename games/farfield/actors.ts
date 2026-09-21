@@ -1,4 +1,4 @@
-import { workerEfficiency } from "./economy.ts";
+import { workerEfficiency, powerEfficiency } from "./economy.ts";
 import type { Module, Point, Role, State, RoomType } from "./engine.ts";
 export type Facing = "up" | "down" | "left" | "right";
 export type Task =
@@ -254,19 +254,32 @@ export function workPower(s: State, task: Task, moduleId?: number) {
     (moduleId === undefined || a.targetId === moduleId);
   const efficiency =
     task === "miners" || task === "build" ? workerEfficiency(s) : 1;
+  const powered =
+    task === "miners" ||
+    task === "farmers" ||
+    task === "scientists" ||
+    task === "medics" ||
+    task === "guards"
+      ? powerEfficiency(s)
+      : 1;
   return (
-    s.workers.filter(atWork).length * efficiency + (atWork(s.friend) ? 2 : 0)
+    (s.workers.filter(atWork).length * efficiency +
+      (atWork(s.friend) ? 2 : 0)) *
+    powered
   );
 }
 export function defenseEfficiency(s: State, moduleId: number) {
   const friend = s.friend;
-  return friend.hp > 0 &&
+  return (
+    powerEfficiency(s) *
+    (friend.hp > 0 &&
     friend.working &&
     !friend.fighting &&
     friend.task === "guards" &&
     friend.targetId === moduleId
-    ? 1
-    : workerEfficiency(s);
+      ? 1
+      : workerEfficiency(s))
+  );
 }
 function step(
   s: State,
