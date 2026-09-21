@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 import { installFixture } from "./fixture.mjs";
+import { observeRoom } from "./room-observer.mjs";
 import { collectionFixture } from "./collection-fixture.mjs";
 import { placementError } from "../games/farfield/engine.ts";
 const origin = process.env.TEST_URL || "http://127.0.0.1:4173";
@@ -41,6 +42,9 @@ try {
       r.fulfill({ json: {} }),
     );
     let latest;
+    await observeRoom(page, (view) => {
+      if (!latest || view.revision >= latest.revision) latest = view;
+    });
     const commands = [];
     page.on("response", async (r) => {
       if (/\/api\/(sync|command|create)$/.test(r.url()) && r.ok()) {
@@ -244,6 +248,23 @@ try {
       );
       assert.equal(commands.length, before, "panel swipe never reaches map");
     }
+    const workerLayout = await palette.evaluate((el) => ({
+      scrollLeft: el.scrollLeft,
+      width: el.clientWidth,
+      contentWidth: el.scrollWidth,
+      left: el.getBoundingClientRect().left,
+      labelLeft: el.querySelector(".crew-job strong").getBoundingClientRect()
+        .left,
+    }));
+    assert.equal(workerLayout.scrollLeft, 0, "worker swipe stays vertical");
+    assert.ok(
+      workerLayout.contentWidth <= workerLayout.width + 1,
+      "worker controls fit the drawer width",
+    );
+    assert.ok(
+      workerLayout.labelLeft >= workerLayout.left,
+      "worker labels are not clipped on the left",
+    );
     // Capture without changing mobile device metrics mid-test.
     const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
     await writeFile(

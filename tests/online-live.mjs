@@ -1,6 +1,7 @@
 // Browser Testing. Two distinct fixture wallets, real public matchmaking and server.
 import { chromium } from "playwright";
 import { installFixture, SECOND_OWNER } from "./fixture.mjs";
+import { observeRoom } from "./room-observer.mjs";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 const origin =
@@ -34,11 +35,15 @@ try {
     };
     clients.push(c);
     await installFixture(page, origin);
+    await observeRoom(page, (view) => {
+      if (!c.latest || view.revision >= c.latest.revision) c.latest = view;
+      if (view.token) c.token = view.token;
+    });
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("response", async (r) => {
       if (/\/api\/(sync|matchmake|command)$/.test(r.url()) && r.ok()) {
-        const v = await r.json();
-        if (v.state) {
+        const v = await r.json().catch(() => null);
+        if (v?.state) {
           c.latest = v;
           if (v.token) c.token = v.token;
         }
@@ -83,6 +88,21 @@ try {
     new Set(["7730", "3412"]),
   );
   await new Promise((r) => setTimeout(r, 15000));
+  // Personal menus must never pause a competitive room for the other player.
+  for (const c of clients)
+    await c.game
+      .getByRole("button", { name: "Game menu", exact: true })
+      .click();
+  const beforeMenus = clients[0].latest.state.time;
+  await new Promise((r) => setTimeout(r, 3000));
+  assert.ok(
+    clients[0].latest.state.time > beforeMenus + 1,
+    "online simulation continues while both players have menus open",
+  );
+  for (const c of clients)
+    await c.game
+      .getByRole("button", { name: "Close dialog", exact: true })
+      .click();
   const loser = clients[1],
     winner = clients[0];
   await loser.game
@@ -121,7 +141,7 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log(
-    "PASS live online: two distinct Friends matched automatically, played, forfeited, same winner, full-screen results; RF disabled",
+    "PASS live online: two distinct Friends matched automatically, personal menus did not pause play, forfeited, same winner, full-screen results; RF disabled",
   );
 } finally {
   for (const c of clients)

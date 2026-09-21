@@ -404,3 +404,82 @@ test("peaceful Friend stops automatic combat, explicit attacks still work, new w
   rooms.advance(0.1, 1000);
   assert.ok(p.state.workers[0].attack);
 });
+
+test("invalid explicit attack targets cancel the route instead of continuing blind pursuit", () => {
+  for (const invalidation of [
+    "wrecked",
+    "removed",
+    "eliminated",
+    "hidden",
+    "dead",
+  ] as const) {
+    const { rooms, room, a, p, q, turret } = battle();
+    p.state.combatModes!.friend = q.state.combatModes!.friend = "peaceful";
+    turret.disabledUntil = 100;
+    q.state.workers = [];
+    Object.assign(q.state.friend, { x: 4, y: 0 });
+    resetOrder(q.state.friend, null, "idle");
+    const moduleTarget =
+      invalidation === "wrecked" || invalidation === "removed";
+    rooms.command(
+      a.code,
+      a.token,
+      {
+        type: "attack",
+        target: q.id,
+        ...(moduleTarget ? { moduleId: turret.id } : {}),
+      },
+      1000,
+    );
+    rooms.advance(0.1, 1000);
+    assert.ok(p.state.friend.path.length, invalidation);
+    if (invalidation === "wrecked") turret.wreck = true;
+    if (invalidation === "removed")
+      q.state.modules = q.state.modules.filter((m) => m !== turret);
+    if (invalidation === "eliminated") q.state.phase = "lost";
+    if (invalidation === "hidden") q.state.friend.x = 9;
+    if (invalidation === "dead") q.state.friend.hp = 0;
+    syncTerrain(room);
+    rooms.advance(0.1, 1000);
+    assert.equal(p.state.friend.attack, undefined, invalidation);
+    assert.deepEqual(p.state.friend.path, [], invalidation);
+    assert.equal(p.state.friend.destination, null, invalidation);
+    assert.equal(p.state.friend.order, "idle", invalidation);
+    const x = p.state.friend.x;
+    rooms.advance(0.1, 1000);
+    assert.equal(p.state.friend.x, x, invalidation);
+  }
+});
+
+test("automatic pursuit resumes the interrupted job after its target disappears", () => {
+  const { rooms, room, p, q, turret } = battle();
+  turret.disabledUntil = 100;
+  const garden: Module = {
+    id: 810,
+    type: "garden",
+    owner: p.id,
+    progress: 1,
+    cells: [{ x: 0, y: 0 }],
+  };
+  p.state.modules.push(garden);
+  resetOrder(p.state.friend, garden.id, "work");
+  syncTerrain(room);
+  rooms.advance(0.1, 1000);
+  assert.ok(p.state.friend.attack);
+  assert.equal(p.state.friend.resumeJob?.targetId, garden.id);
+  rooms.advance(0.1, 1000);
+  assert.ok(p.state.friend.path.length);
+  q.state.workers = [];
+  turret.wreck = true;
+  rooms.advance(0.1, 1000);
+  assert.equal(p.state.friend.attack, undefined);
+  assert.deepEqual(p.state.friend.path, []);
+  assert.equal(p.state.friend.destination, null);
+  assert.equal(p.state.friend.targetId, garden.id);
+  assert.equal(p.state.friend.order, "work");
+  assert.equal(p.state.friend.resumeJob, undefined);
+  p.state.combatModes!.friend = "peaceful";
+  for (let i = 0; i < 20; i++) rooms.advance(0.1, 1000);
+  assert.equal(p.state.friend.working, true);
+  assert.equal(p.state.friend.task, "farmers");
+});

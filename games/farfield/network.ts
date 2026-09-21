@@ -73,3 +73,55 @@ export function request<T>(
 }
 export const send = (session: Session, command: Command) =>
   request<RoomView>("command", { code: session.code, command }, session.token);
+
+/** Long-lived private reply port. Heartbeats detect a stalled proxy or host. */
+export function subscribe(
+  session: Session,
+  active: boolean,
+  onView: (view: RoomView) => void,
+  onError: (error: Error) => void,
+): { close: () => void; presence: (active: boolean) => void } {
+  const channel = new MessageChannel();
+  let closed = false;
+  let watchdog: ReturnType<typeof setTimeout>;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    clearTimeout(watchdog);
+    channel.port1.postMessage({ cancel: true });
+    channel.port1.close();
+  };
+  const fail = (message: string) => {
+    if (closed) return;
+    close();
+    onError(new Error(message));
+  };
+  const reset = () => {
+    clearTimeout(watchdog);
+    watchdog = setTimeout(() => fail("Station connection timed out."), 22000);
+  };
+  channel.port1.onmessage = (event) => {
+    if (closed) return;
+    reset();
+    if (event.data?.error) fail(event.data.error);
+    else if (event.data?.result) onView(event.data.result as RoomView);
+  };
+  channel.port1.onmessageerror = () => fail("Invalid station update.");
+  reset();
+  window.parent.postMessage(
+    {
+      channel: "farfield-room-v1",
+      action: "subscribe",
+      body: { code: session.code, active },
+      token: session.token,
+    },
+    new URL(window.location.href).origin,
+    [channel.port2],
+  );
+  return {
+    close,
+    presence: (active) => {
+      if (!closed) channel.port1.postMessage({ active });
+    },
+  };
+}

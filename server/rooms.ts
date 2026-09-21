@@ -27,6 +27,7 @@ export type Player = {
   bot: boolean;
   lastSeen: number;
   active: boolean;
+  departed?: boolean;
   color: string;
   state: State;
   raidReadyAt: number;
@@ -153,7 +154,7 @@ export class Rooms {
   access(code: string, token: string, now = Date.now()) {
     const room = this.rooms.get(code),
       current = room?.players.find(
-        (p) => !p.bot && p.token === token && token.length > 0,
+        (p) => !p.bot && !p.departed && p.token === token && token.length > 0,
       );
     if (!room || !current)
       throw new Error("This room session expired. Join the match again.");
@@ -161,7 +162,8 @@ export class Rooms {
     room.touched = now;
     if (
       !room.players.some(
-        (p) => p.token === room.host && now - p.lastSeen < 15_000,
+        (p) =>
+          !p.departed && p.token === room.host && now - p.lastSeen < 15_000,
       )
     )
       room.host = token;
@@ -215,7 +217,7 @@ export class Rooms {
         bot: p.bot,
         difficulty: p.state.difficulty,
         color: p.color,
-        online: p.bot || now - p.lastSeen < 8000,
+        online: p.bot || (!p.departed && now - p.lastSeen < 8000),
         host: p.token === room.host,
       })),
     };
@@ -295,23 +297,39 @@ export class Rooms {
   }
   advance(dt: number, now = Date.now()) {
     for (const room of this.rooms.values()) {
+      // Visibility is a rendering hint, not permission to pause competitive
+      // play. Keep online matches running throughout the reconnect window,
+      // even when every tab is hidden or every connection has dropped.
+      const onlinePlaying =
+        room.mode === "online" &&
+        room.players.some((p) => p.state.phase === "playing");
       if (
         room.winnerId ||
-        !room.players.some((p) => !p.bot && p.active && now - p.lastSeen < 8000)
+        room.draw ||
+        (!onlinePlaying &&
+          !room.players.some(
+            (p) => !p.bot && p.active && now - p.lastSeen < 8000,
+          ))
       )
         continue;
+
+      if (onlinePlaying) {
+        for (const p of room.players) {
+          if (p.state.phase === "playing" && now - p.lastSeen > 60_000) {
+            p.state.phase = "lost";
+            p.state.integrity = 0;
+            p.state.elimination = { reason: "disconnect" };
+            p.state.log.unshift("Connection timed out after 60 seconds.");
+          }
+        }
+        this.settle(room);
+        if (room.winnerId || room.draw) {
+          room.revision++;
+          continue;
+        }
+      }
       syncTerrain(room);
       for (const p of room.players) {
-        if (
-          room.mode === "online" &&
-          p.state.phase === "playing" &&
-          now - p.lastSeen > 60_000
-        ) {
-          p.state.phase = "lost";
-          p.state.integrity = 0;
-          p.state.elimination = { reason: "disconnect" };
-          p.state.log.unshift("Connection timed out after 60 seconds.");
-        }
         tick(
           p.state,
           dt,
@@ -425,9 +443,10 @@ export class Rooms {
         room.host = room.players.find((p) => !p.bot)?.token ?? "";
     }
     current.active = false;
+    current.departed = true;
     if (
       (!room.wager || !room.players.length) &&
-      !room.players.some((p) => !p.bot && p.active)
+      !room.players.some((p) => !p.bot && !p.departed)
     )
       this.rooms.delete(code);
     room.revision++;

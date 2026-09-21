@@ -9,3 +9,7 @@ artifacts/*
 
 contracts/out/
 contracts/cache/
+
+# Server-side room snapshots contain private seat capabilities.
+.farfield/
+backups/

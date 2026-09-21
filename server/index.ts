@@ -1,3 +1,5 @@
+import { RoomStore } from "./room-store.ts";
+import { RoomStreams } from "./events.ts";
 import { RequestLimits } from "./rate-limit.ts";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -8,7 +10,40 @@ import { forwardFriendRpc } from "./friend-rpc.ts";
 import type { Command } from "../games/farfield/engine.ts";
 const rooms = new Rooms(),
   root = resolve(process.env.GAME_ROOT || "games/farfield/.friendsdk");
+const store = process.env.FARFIELD_STATE_PATH
+  ? new RoomStore(resolve(process.env.FARFIELD_STATE_PATH), { webRoot: root })
+  : null;
+if (store) {
+  rooms.rooms = await store.load();
+  // Fail startup if the configured durable path is not writable.
+  await store.save(rooms.rooms);
+}
+let checkpointError = false;
+let checkpointPending: Promise<void> | null = null;
+const checkpoint = () => {
+  if (!store || checkpointPending)
+    return checkpointPending ?? Promise.resolve();
+  checkpointPending = store
+    .save(rooms.rooms)
+    .then(() => {
+      checkpointError = false;
+    })
+    .catch(() => {
+      checkpointError = true;
+      console.error("Match checkpoint failed; check persistent storage.");
+    })
+    .finally(() => {
+      checkpointPending = null;
+    });
+  return checkpointPending;
+};
+const checkpointTimer = store
+  ? setInterval(() => {
+      void checkpoint();
+    }, 5000)
+  : null;
 const wagers = new Wagers(rooms);
+const streams = new RoomStreams(rooms);
 void wagers.initialize();
 const wagerTimer = setInterval(() => {
   void wagers.pump();
@@ -147,7 +182,9 @@ const server = createServer(async (req, res) => {
       if (typeof body.code !== "string")
         throw new Error("Missing station code.");
       const token = (req.headers.authorization || "").replace(/^Bearer /, "");
-      if (url.pathname === "/api/leave") {
+      if (url.pathname === "/api/events") {
+        streams.open(req, res, body.code, token, body.active === true);
+      } else if (url.pathname === "/api/leave") {
         res.end(JSON.stringify(rooms.leave(body.code, token)));
       } else if (url.pathname === "/api/sync") {
         const { room, player } = rooms.access(body.code, token);
@@ -174,7 +211,13 @@ const server = createServer(async (req, res) => {
   }
   if (url.pathname === "/health") {
     res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ status: "ok", rooms: rooms.rooms.size }));
+    res.statusCode = checkpointError ? 503 : 200;
+    res.end(
+      JSON.stringify({
+        status: checkpointError ? "storage-unavailable" : "ok",
+        rooms: rooms.rooms.size,
+      }),
+    );
     return;
   }
   if (!["GET", "HEAD"].includes(req.method || "")) {
@@ -214,8 +257,33 @@ const port = Number(process.env.PORT || 4173);
 server.listen(port, "0.0.0.0", () =>
   console.log(`Farfield arena listening on http://0.0.0.0:${port}`),
 );
-process.on("SIGTERM", () => {
+let stopping = false;
+const shutdown = async () => {
+  if (stopping) return;
+  stopping = true;
   clearInterval(interval);
   clearInterval(wagerTimer);
-  server.close();
+  if (checkpointTimer) clearInterval(checkpointTimer);
+  streams.closeAll();
+  const deadline = setTimeout(() => process.exit(1), 25000);
+  deadline.unref();
+  try {
+    // Finish accepted requests before committing the final authoritative state.
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    );
+    await checkpointPending;
+    if (store) await store.save(rooms.rooms);
+    clearTimeout(deadline);
+    process.exit(0);
+  } catch {
+    console.error("Could not save matches during shutdown.");
+    process.exit(1);
+  }
+};
+process.on("SIGTERM", () => {
+  void shutdown();
+});
+process.on("SIGINT", () => {
+  void shutdown();
 });

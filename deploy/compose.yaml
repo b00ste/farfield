@@ -1,0 +1,53 @@
+name: farfield
+
+services:
+  farfield:
+    image: farfield:${FARFIELD_IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      NODE_ENV: production
+      PORT: "4173"
+      FARFIELD_STATE_PATH: /data/rooms.json
+      RF_WAGERS_ENABLED: "false"
+    volumes:
+      - rooms:/data
+    expose:
+      - "4173"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      farfield:
+        condition: service_healthy
+    environment:
+      GAME_DOMAIN: ${GAME_DOMAIN:?Set GAME_DOMAIN to the public game hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  rooms:
+  caddy_data:
+  caddy_config:

@@ -1,3 +1,8 @@
+import {
+  commandPoint,
+  friendOrder,
+  type OrderMarker,
+} from "./order-feedback.ts";
 import { ABILITIES, type Ability } from "./combat.ts";
 import { GameSelect } from "./GameSelect.tsx";
 import { matchResult } from "./results.ts";
@@ -17,7 +22,13 @@ import {
   type Command,
   type Point,
 } from "./engine.ts";
-import { request, send, type RoomView, type Session } from "./network.ts";
+import {
+  request,
+  send,
+  subscribe,
+  type RoomView,
+  type Session,
+} from "./network.ts";
 import { StationMap } from "./Map.tsx";
 import { Crew } from "./Crew.tsx";
 import { JOBS, TASK_LABELS, ROLE_NAMES, housing, workPower } from "./actors.ts";
@@ -198,6 +209,14 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
         ?.focus({ preventScroll: true }),
     );
   const queued = useRef<Command[]>([]);
+  const commandRef = useRef<((c: Command) => Promise<void>) | null>(null);
+  const orderEpoch = useRef(0);
+  const clearPendingOrders = () => {
+    queued.current = [];
+    orderEpoch.current++;
+    setOrderMarker(null);
+  };
+  const [orderMarker, setOrderMarker] = useState<OrderMarker | null>(null);
   const [inspectedId, setInspectedId] = useState<number | null>(null);
   const [drawer, setDrawer] = useState<"build" | "crew" | null>(null);
   const [dock, setDock] = useState<"bottom" | "left" | "right">("bottom");
@@ -235,6 +254,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
         return;
       if (event.key === "Escape") {
         event.preventDefault();
+        clearPendingOrders();
         setSelected(null);
         setGhost(null);
         setInspectedId(null);
@@ -317,6 +337,10 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
   );
   const state = room?.state || empty,
     halted = paused || !!panel || offline;
+  useEffect(() => {
+    if (halted || state.paused || state.phase !== "playing")
+      clearPendingOrders();
+  }, [halted, state.paused, state.phase]);
   blocked.current = paused || !!panel;
   active.current = !blocked.current && !document.hidden;
   useEffect(() => {
@@ -328,6 +352,8 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
     sound.current = createFriendSoundKit({ muted: true });
     return () => {
       alive.current = false;
+      queued.current = [];
+      orderEpoch.current++;
       pref.removeEventListener("change", change);
       sound.current?.dispose();
     };
@@ -374,18 +400,24 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
       cancelled = true;
     };
   }, [friendId, retry]);
+  const roomStream = useRef<ReturnType<typeof subscribe> | null>(null);
+  useEffect(() => {
+    roomStream.current?.presence(active.current);
+  }, [paused, panel]);
   useEffect(() => {
     if (!session) return;
     let stopped = false;
+    let attempts = 0;
     let timer: ReturnType<typeof setTimeout>;
-    const sync = async () => {
-      try {
-        const view = await request<RoomView>(
-          "sync",
-          { code: session.code, active: active.current },
-          session.token,
-        );
-        if (!stopped) {
+    const connect = () => {
+      if (stopped) return;
+      roomStream.current?.close();
+      roomStream.current = subscribe(
+        session,
+        active.current,
+        (view) => {
+          if (stopped) return;
+          attempts = 0;
           setRoom((previous) =>
             !previous ||
             previous.code !== view.code ||
@@ -394,38 +426,53 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
               : previous,
           );
           setOffline(false);
-        }
-      } catch (error) {
-        if (!stopped) {
+        },
+        (error) => {
+          if (stopped) return;
           setOffline(true);
-          if (
-            error instanceof Error &&
-            error.message.includes("session expired")
-          ) {
+          if (error.message.includes("session expired")) {
             setError(
-              "This match expired or the server restarted. Return to the main menu to start again.",
+              "This match expired. Return to the main menu to start again.",
             );
             setSession(null);
+            return;
           }
-        }
-      } finally {
-        if (!stopped) timer = setTimeout(sync, 250);
-      }
+          // Reconnect without flooding a struggling proxy; never replay old commands.
+          timer = setTimeout(connect, Math.min(1000 * 2 ** attempts++, 10000));
+        },
+      );
     };
-    void sync();
+    connect();
     const hidden = () => {
       active.current = !document.hidden && !blocked.current;
+      roomStream.current?.presence(active.current);
+    };
+    const disconnected = () => {
+      clearTimeout(timer);
+      roomStream.current?.close();
+      setOffline(true);
+    };
+    const reconnected = () => {
+      clearTimeout(timer);
+      attempts = 0;
+      connect();
+    };
+    const restored = (event: PageTransitionEvent) => {
+      if (event.persisted) reconnected();
     };
     document.addEventListener("visibilitychange", hidden);
+    window.addEventListener("offline", disconnected);
+    window.addEventListener("online", reconnected);
+    window.addEventListener("pageshow", restored);
     return () => {
       stopped = true;
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", hidden);
-      void request(
-        "sync",
-        { code: session.code, active: false },
-        session.token,
-      ).catch(() => {});
+      window.removeEventListener("offline", disconnected);
+      window.removeEventListener("online", reconnected);
+      window.removeEventListener("pageshow", restored);
+      roomStream.current?.close();
+      roomStream.current = null;
     };
   }, [session]);
   useEffect(() => {
@@ -499,17 +546,42 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
     await request("home", {});
   };
   const command = async (c: Command) => {
-    if (!session || halted) return;
+    if (!session || halted || (state.paused && c.type !== "pause")) return;
     if (locked.current) {
+      const friendOrders = [
+        "direct",
+        "attack",
+        "capture",
+        "gather",
+        "stop-friend",
+      ];
+      if (friendOrders.includes(c.type))
+        queued.current = queued.current.filter(
+          (order) => !friendOrders.includes(order.type),
+        );
       queued.current.push(c);
       return;
     }
     locked.current = true;
+    const epoch = orderEpoch.current;
+    const point = commandPoint(state, c);
+    if (point)
+      setOrderMarker({
+        point,
+        status: "pending",
+        until: performance.now() + 10000,
+      });
     setBusy(true);
     setError("");
     try {
       const view = await send(session, c);
       if (alive.current) {
+        if (point && epoch === orderEpoch.current)
+          setOrderMarker({
+            point,
+            status: "accepted",
+            until: performance.now() + 1800,
+          });
         setRoom((previous) =>
           !previous ||
           previous.code !== view.code ||
@@ -517,7 +589,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
             ? view
             : previous,
         );
-        if (c.type === "build") {
+        if (c.type === "build" && epoch === orderEpoch.current) {
           setGhost(null);
           setSelected(null);
           setInspectedId(view.state.modules.at(-1)?.id ?? null);
@@ -525,17 +597,25 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
         }
       }
     } catch (e) {
-      if (alive.current)
+      if (alive.current && epoch === orderEpoch.current) {
+        if (point)
+          setOrderMarker({
+            point,
+            status: "rejected",
+            until: performance.now() + 2500,
+          });
         setError(e instanceof Error ? e.message : "Command failed.");
+      }
     } finally {
       locked.current = false;
       if (alive.current) {
         setBusy(false);
         const next = queued.current.shift();
-        if (next) void command(next);
+        if (next) void commandRef.current?.(next);
       }
     }
   };
+  commandRef.current = command;
   // Settings actions can submit while a personal modal blocks map input; worker drawers stay live.
   const crewCommand = async (c: Command) => {
     if (!session || locked.current || paused || offline) return;
@@ -560,7 +640,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
       if (alive.current) {
         setBusy(false);
         const next = queued.current.shift();
-        if (next) void command(next);
+        if (next) void commandRef.current?.(next);
       }
     }
   };
@@ -684,7 +764,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
             <small>ALLOY</small>
           </button>
           <button
-            title="Energy powers rooms, research and defense"
+            title="Energy powers Shield (Q) and EMP (E)"
             onClick={() => setPanel("help")}
           >
             <span className="energy">ϟ</span>
@@ -758,6 +838,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
       )}
       <div className="world-stage">
         <StationMap
+          orderMarker={orderMarker}
           focusPoint={focusPoint}
           state={watching?.state ?? state}
           contacts={[]}
@@ -858,16 +939,18 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
         </div>
       )}
       {state.phase === "playing" && (
-        <div className="combat-readout" role="status">
+        <div
+          className="combat-readout"
+          role="status"
+          data-testid="friend-order"
+        >
           {state.friend.hp <= 0
             ? "Friend down — respawning at your core"
             : state.time - state.friend.lastHit < 1.5
               ? "UNDER FIRE · Shield or retreat to heal"
-              : state.friend.attack
-                ? `ATTACKING · ${state.terrain?.find((m) => m.id === state.friend.attack?.moduleId)?.type ? MODULES[state.terrain!.find((m) => m.id === state.friend.attack?.moduleId)!.type].name : "Enemy"}`
-                : (state.abilities?.shieldUntil ?? 0) > state.time
-                  ? "SHIELD ACTIVE · 65% less damage"
-                  : ""}
+              : (state.abilities?.shieldUntil ?? 0) > state.time
+                ? `Shield active · ${friendOrder(state)}`
+                : friendOrder(state)}
         </div>
       )}
       <span className="sr-only" data-testid="friend-task">

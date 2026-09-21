@@ -1,4 +1,5 @@
 import { saveSeat, clearSeat } from "./session";
+import { relayRoomStream } from "./room-stream";
 import { createRoot } from "react-dom/client";
 import { WalletApp, walletUi, spriteReader } from "./wallet-host";
 import "@rarefriends/friendsdk/frame.css";
@@ -12,6 +13,7 @@ const actions = new Set([
   "create",
   "join",
   "sync",
+  "subscribe",
   "command",
   "art",
   "setup",
@@ -23,6 +25,9 @@ const actions = new Set([
   "wallet",
 ]);
 let inFlight = 0;
+let stopStream: (() => void) | undefined;
+window.addEventListener("pagehide", () => stopStream?.());
+window.addEventListener("farfield-home", () => stopStream?.());
 window.addEventListener("message", async (event) => {
   const frame = document.querySelector<HTMLIFrameElement>(
     ".rf-frame-viewport iframe",
@@ -49,7 +54,7 @@ window.addEventListener("message", async (event) => {
     port.close();
     return;
   }
-  if (walletUi.blocked && data.action !== "sync") {
+  if (walletUi.blocked && !["sync", "subscribe"].includes(data.action)) {
     port.postMessage({ error: "Close the wallet menu before playing." });
     port.close();
     return;
@@ -63,6 +68,28 @@ window.addEventListener("message", async (event) => {
   } catch {
     port.postMessage({ error: "Station request is too large." });
     port.close();
+    return;
+  }
+  if (data.action === "subscribe") {
+    if (
+      typeof data.body.code !== "string" ||
+      !/^[A-F0-9]{10}$/.test(data.body.code)
+    ) {
+      port.postMessage({ error: "Invalid station code." });
+      port.close();
+      return;
+    }
+    stopStream?.();
+    stopStream = relayRoomStream(
+      port,
+      data.token,
+      data.body.code,
+      data.body.active === true,
+      () =>
+        document.querySelector<HTMLIFrameElement>(".rf-frame-viewport iframe")
+          ?.contentWindow === event.source,
+      () => walletUi.blocked,
+    );
     return;
   }
   inFlight++;

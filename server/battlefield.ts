@@ -431,6 +431,14 @@ function resumeJob(actor: Actor) {
   resetOrder(actor, job.targetId, job.order, job.destination);
   actor.nodeId = job.nodeId;
 }
+function endPursuit(actor: Actor) {
+  // Dropping just the target leaves the movement order and cached route alive.
+  // Automatic combat returns to its interrupted job; an explicit attack stops.
+  if (actor.resumeJob) resumeJob(actor);
+  else resetOrder(actor, null, "idle");
+  actor.fighting = false;
+  actor.task = actor.order === "idle" ? "idle" : "move";
+}
 /** Acquire only nearby, visible targets reachable on completed flooring. Scan at most once a second. */
 function autoCombat(
   p: Player,
@@ -593,7 +601,7 @@ export function advanceBattlefield(room: Room, dt: number) {
         const order = attack,
           other = active.find((o) => o.id === order.playerId);
         if (!other) {
-          a.attack = undefined;
+          endPursuit(a);
           continue;
         }
         const sight = vision(p);
@@ -611,7 +619,7 @@ export function advanceBattlefield(room: Room, dt: number) {
             (t) => sight.has(key({ x: Math.round(t.x), y: Math.round(t.y) })),
           )
         ) {
-          a.attack = undefined;
+          endPursuit(a);
           continue;
         }
         if (
@@ -646,7 +654,7 @@ export function advanceBattlefield(room: Room, dt: number) {
             a.resumeJob = saved;
             a.attack = order;
           }
-        } else a.attack = undefined;
+        } else endPursuit(a);
       }
     }
     for (const m of s.modules.filter(

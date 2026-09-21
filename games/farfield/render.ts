@@ -1,3 +1,4 @@
+import { attackTarget, type OrderMarker } from "./order-feedback.ts";
 import { COMBAT } from "./combat.ts";
 import {
   JOBS,
@@ -97,6 +98,7 @@ export function render(
   elapsed = 0,
   inspectedId: number | null = null,
   contacts: Contact[] = [],
+  orderMarker: OrderMarker | null = null,
 ) {
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = "#0c141f";
@@ -215,7 +217,9 @@ export function render(
     if (!mod.cells.some((p) => onScreen(px(p.x), py(p.y), size * 6))) continue;
     const hostile =
       s.shared && mod.owner !== s.playerId && mod.owner !== "neutral";
-    const targeted = s.friend.attack?.moduleId === mod.id;
+    const targeted =
+      s.friend.attack?.moduleId === mod.id &&
+      s.friend.attack.playerId === mod.owner;
     if (
       mod.type === "turret" &&
       mod.progress >= 1 &&
@@ -743,6 +747,43 @@ export function render(
       for (let y = top; y <= bottom; y++)
         if (!known.has(`${x},${y}`))
           ctx.fillRect(px(x), py(y), size + 1, size + 1);
+  }
+  const target = attackTarget(s);
+  if (target) {
+    const x = px(target.point.x + 0.5),
+      y = py(target.point.y + 0.5);
+    ctx.strokeStyle = "#ffb088";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(12, size * 0.65), 0, Math.PI * 2);
+    ctx.moveTo(x - size, y);
+    ctx.lineTo(x - size * 0.7, y);
+    ctx.moveTo(x + size * 0.7, y);
+    ctx.lineTo(x + size, y);
+    ctx.stroke();
+  }
+  if (orderMarker && orderMarker.until > performance.now()) {
+    const { point, status } = orderMarker;
+    const x = px(point.x + 0.5),
+      y = py(point.y + 0.5);
+    ctx.strokeStyle =
+      status === "rejected"
+        ? "#ff8c96"
+        : status === "pending"
+          ? "#efd767"
+          : "#d6edb2";
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(10, size * 0.42), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.font = "bold 13px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      status === "rejected" ? "×" : status === "pending" ? "…" : "✓",
+      x,
+      y + 4,
+    );
   }
   for (const shot of s.shots) {
     const color = shot.hostile

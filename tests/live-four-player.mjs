@@ -1,6 +1,7 @@
 // Browser Testing only. Four real clients on live HTTP simulation; only wallet/NFT RPC is mocked.
 import { chromium } from "playwright";
 import { installFixture } from "./fixture.mjs";
+import { observeRoom } from "./room-observer.mjs";
 import { place } from "../server/arena.ts";
 import { routeTo } from "../games/farfield/actors.ts";
 import { housing, capacity, MODULES } from "../games/farfield/engine.ts";
@@ -26,6 +27,7 @@ const clients = [],
     commands: [],
     samples: [],
     timings: [],
+    transport: { streamRequests: 0, syncRequests: 0, stateMessages: 0 },
   };
 await mkdir("artifacts", { recursive: true });
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -76,6 +78,17 @@ async function connect(i) {
   };
   clients.push(c);
   await installFixture(page, origin);
+  await observeRoom(page, (view) => {
+    report.transport.stateMessages++;
+    if (!c.latest || view.revision >= c.latest.revision) c.latest = view;
+    c.code = view.code;
+    if (view.token) c.token = view.token;
+  });
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/events") report.transport.streamRequests++;
+    if (path === "/api/sync") report.transport.syncRequests++;
+  });
   page.on("pageerror", (e) =>
     report.errors.push({ client: i, pageError: e.message }),
   );
@@ -86,6 +99,17 @@ async function connect(i) {
         client: i,
         status: r.status(),
         path: new URL(r.url()).pathname,
+        at: new Date().toISOString(),
+        ...(report.httpErrors.length < 4
+          ? {
+              body: (await r.text().catch(() => "<unavailable>")).slice(
+                0,
+                1000,
+              ),
+              contentType: r.headers()["content-type"],
+              server: r.headers()["server"],
+            }
+          : {}),
       });
     if (/\/api\/(sync|create|join|command)$/.test(r.url()) && r.ok()) {
       const v = await r.json().catch(() => null);
@@ -478,6 +502,22 @@ try {
     time: c.latest.state.time,
   }));
   report.completed = new Date().toISOString();
+  assert.equal(report.errors.length, 0, "live gameplay and page errors");
+  assert.equal(report.httpErrors.length, 0, "live transport HTTP errors");
+  if (process.env.EXPECT_STREAM === "1") {
+    assert.ok(
+      report.transport.streamRequests >= 4,
+      "all four clients request live streams",
+    );
+    assert.ok(
+      report.transport.syncRequests < duration * 2,
+      "live sessions do not fall back to rapid HTTP polling",
+    );
+    assert.ok(
+      report.transport.stateMessages > duration,
+      "continuous RoomView messages arrive through the host",
+    );
+  }
   console.log(
     "LIVE COMPLETE",
     JSON.stringify({

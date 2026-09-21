@@ -262,3 +262,82 @@ test("connected blueprints queue ahead and are built from reachable floors in or
     assert.ok(s.modules.every((m) => m.progress === 1));
   }
 });
+
+test("recalling and reassigning a mobile guard clears its previous squad order", () => {
+  for (const stance of ["follow", "defend"] as const) {
+    const s = started();
+    build(s, "turret");
+    advance(s, 5);
+    assert.equal(applyCommand(s, { type: "recruit", role: "guards" }), null);
+    const guard = s.workers[0];
+    guard.stance = stance;
+    guard.defendAt = { x: -1, y: -1 };
+    assert.equal(
+      applyCommand(s, { type: "assign", role: "guards", delta: -1 }),
+      null,
+    );
+    assert.equal(guard.stance, undefined);
+    assert.equal(guard.defendAt, undefined);
+    assert.equal(
+      applyCommand(s, { type: "assign", role: "guards", delta: 1 }),
+      null,
+    );
+    assert.equal(
+      applyCommand(s, { type: "direct", x: -1, y: -1, task: "move" }),
+      null,
+    );
+    advance(s, 4);
+    assert.equal(guard.targetId, s.modules[1].id);
+    assert.equal(guard.task, "guards");
+    assert.equal(workPower(s, "guards", s.modules[1].id), 1);
+  }
+});
+
+test("workers clearing a dismantled building cannot be reassigned before reaching safety", () => {
+  const s = started();
+  build(s, "garden");
+  advance(s, 5);
+  assert.equal(applyCommand(s, { type: "recruit", role: "farmers" }), null);
+  advance(s, 4);
+  const garden = s.modules[1];
+  s.modules.push({
+    id: 99,
+    type: "garden",
+    progress: 1,
+    owner: "Commander",
+    cells: [{ x: -2, y: -1 }],
+  });
+  assert.equal(
+    applyCommand(s, { type: "demolish", moduleId: garden.id }),
+    null,
+  );
+  assert.equal(s.workers[0].evacuating, true);
+  const before = JSON.stringify(s.workers[0]);
+  assert.match(
+    applyCommand(s, { type: "assign", role: "farmers", delta: 1 })!,
+    /clearing/i,
+  );
+  assert.equal(JSON.stringify(s.workers[0]), before);
+  advance(s, 5);
+  assert.equal(s.workers[0].evacuating, false);
+  assert.ok(!s.modules.includes(garden));
+});
+
+test("a work command cannot send the Friend back onto a dismantling building", () => {
+  const s = started();
+  build(s, "garden");
+  advance(s, 5);
+  const garden = s.modules[1];
+  assert.equal(
+    applyCommand(s, { type: "demolish", moduleId: garden.id }),
+    null,
+  );
+  const before = JSON.stringify(s.friend);
+  assert.match(
+    applyCommand(s, { type: "direct", ...garden.cells[0] })!,
+    /dismantled/,
+  );
+  assert.equal(JSON.stringify(s.friend), before);
+  advance(s, 5);
+  assert.ok(!s.modules.includes(garden));
+});

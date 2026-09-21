@@ -110,3 +110,100 @@ test("starting cores no longer have bonus resource deposits", () => {
       .players.every((p) => p.state.deposits.length === 0),
   );
 });
+
+test("online play continues with backgrounded tabs and reconnects keep the same seat", () => {
+  const rooms = new Rooms();
+  const a = rooms.matchmake("1", 1000);
+  const b = rooms.matchmake("2", 1001);
+  const room = rooms.rooms.get(a.code)!;
+  for (const p of room.players) p.active = false;
+  rooms.advance(0.5, 2000);
+  assert.ok(room.players.every((p) => p.state.time === 0.5));
+
+  // Both connections can disappear briefly without freezing the simulation
+  // or recreating either station on recovery.
+  rooms.advance(0.5, 30_000);
+  assert.ok(room.players.every((p) => p.state.time === 1));
+  const recovered = rooms.access(a.code, a.token, 30_001);
+  assert.equal(recovered.player.id, a.selfId);
+  assert.equal(recovered.player.state.phase, "playing");
+  assert.equal(recovered.player.state.time, 1);
+  rooms.access(b.code, b.token, 30_001);
+  rooms.advance(0.5, 61_002);
+  assert.ok(room.players.every((p) => p.state.phase === "playing"));
+});
+
+test("online disconnect expiry settles even with no active viewers and a draw stays terminal", () => {
+  const rooms = new Rooms();
+  const a = rooms.matchmake("1", 1000);
+  rooms.matchmake("2", 1001);
+  const room = rooms.rooms.get(a.code)!;
+  for (const p of room.players) p.active = false;
+  rooms.advance(0.1, 61_002);
+  assert.equal(room.draw, true);
+  assert.equal(room.winnerId, null);
+  assert.ok(
+    room.players.every(
+      (p) =>
+        p.state.phase === "lost" &&
+        p.state.elimination?.reason === "disconnect",
+    ),
+  );
+  const revision = room.revision;
+  const recovered = rooms.access(a.code, a.token, 62_000);
+  recovered.player.active = true;
+  assert.equal(rooms.view(room, a.token, 62_000).draw, true);
+  rooms.advance(0.5, 62_001);
+  assert.equal(room.revision, revision);
+});
+
+test("an online backgrounded opponent still wins when the other seat times out", () => {
+  const rooms = new Rooms();
+  const a = rooms.matchmake("1", 1000);
+  const b = rooms.matchmake("2", 1001);
+  const room = rooms.rooms.get(a.code)!;
+  for (const p of room.players) p.active = false;
+  rooms.access(b.code, b.token, 60_000);
+  rooms.advance(0.1, 61_002);
+  assert.equal(room.winnerId, b.selfId);
+  assert.equal(
+    rooms.view(room, a.token, 61_002).state.elimination?.reason,
+    "disconnect",
+  );
+});
+
+test("leaving an online match preserves the result for a backgrounded opponent", () => {
+  const rooms = new Rooms();
+  const a = rooms.matchmake("1", 1000);
+  const b = rooms.matchmake("2", 1001);
+  const room = rooms.rooms.get(a.code)!;
+  rooms.access(b.code, b.token, 1002).player.active = false;
+  rooms.leave(a.code, a.token, 1003);
+  assert.equal(rooms.rooms.get(a.code), room);
+  assert.throws(() => rooms.access(a.code, a.token, 1004), /expired/);
+  rooms.access(b.code, b.token, 1004);
+  const result = rooms.view(room, b.token, 1004);
+  assert.equal(result.state.phase, "won");
+  assert.equal(result.winnerId, b.selfId);
+  assert.equal(result.players.find((p) => p.id === a.selfId)?.online, false);
+  rooms.leave(b.code, b.token, 1005);
+  assert.equal(rooms.rooms.has(a.code), false);
+});
+
+test("custom matches retain backgrounded commanders and transfer a departed host immediately", () => {
+  const rooms = new Rooms();
+  const a = rooms.create("1", 1000, "normal", "custom", ["easy"]);
+  const b = rooms.join(a.code, "2", 1001);
+  rooms.command(a.code, a.token, { type: "start" }, 1002);
+  const room = rooms.rooms.get(a.code)!;
+  rooms.access(b.code, b.token, 1003).player.active = false;
+  rooms.leave(a.code, a.token, 1004);
+  assert.equal(rooms.rooms.get(a.code), room);
+  assert.equal(room.winnerId, null);
+  rooms.access(b.code, b.token, 1005);
+  assert.equal(room.host, b.token);
+  assert.equal(
+    rooms.command(b.code, b.token, { type: "pause" }, 1006).state.paused,
+    true,
+  );
+});

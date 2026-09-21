@@ -1,6 +1,7 @@
 // Browser Testing: logical viewport, actual UI placement/dismantling, reload recovery.
 import { chromium } from "playwright";
 import { installFixture } from "./fixture.mjs";
+import { observeRoom } from "./room-observer.mjs";
 import { placementError } from "../games/farfield/engine.ts";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
@@ -17,12 +18,16 @@ const context = await browser.newContext({
   page = await context.newPage();
 await installFixture(page, origin);
 let latest, token;
+await observeRoom(page, (view) => {
+  if (!latest || view.revision >= latest.revision) latest = view;
+  if (view.token) token = view.token;
+});
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("response", async (r) => {
   if (/\/api\/(sync|create|command)$/.test(r.url()) && r.ok()) {
-    const v = await r.json();
-    if (v.state) {
+    const v = await r.json().catch(() => null);
+    if (v?.state) {
       latest = v;
       if (v.token) token = v.token;
     }

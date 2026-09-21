@@ -106,3 +106,19 @@ This section supersedes earlier implementation notes: voluntary dismantling remo
 - [ ] Hosting for larger public concurrency: direct 16-seat transport test passes; development proxy rate-limits the public 16-seat test.
 
 - [x] Live expired-seat test returns to the title menu and clears saved recovery data; fixed the banner button inheriting blocked pointer input.
+
+## Specialist playtest — controls and reconnects, 21 September
+
+- [x] Escape, opening the game menu, disconnects and match end cancel unsent commands. Rapid Friend orders retain only the latest destination behind the in-flight request. Commands already accepted by the server remain authoritative.
+- [x] Add pending/accepted/rejected map markers, current Friend task text, and visible-target reticles. Resolve attack targets by owner and ID; do not reveal hidden targets. Correct the energy tooltip to Shield/EMP.
+- [x] Clear recalled guards’ follow/hold orders when assigning them back to a workplace. Protect evacuation from reassignment or commands back onto the clearing building.
+- [x] End pursuit when a target dies, disappears or leaves vision; automatic combat resumes the interrupted job.
+- [x] Keep online simulation and disconnect expiry running when every tab is hidden. Resolve simultaneous expiry as a terminal draw.
+- [x] Separate leaving a room from hiding a tab: preserve backgrounded opponents’ matches/results, invalidate departed capabilities and migrate host control.
+- [x] Fit worker labels and controls on narrow screens; prevent vertical swipes from scrolling the worker drawer sideways.
+- [ ] Finish combined-build browser regression and fresh live four-session stress test.
+- [ ] Real Safari/device check on the owner’s MacBook, iPhone and iPad.
+- [x] Prepare single-server Docker/Caddy deployment for AWS or GCP, private snapshots and a hosted CI container recovery check. Real process restart/crash recovery passes; cloud provisioning is pending domain, region and budget.
+- [x] Replace four-times-per-second sync polling with an authenticated event stream. The latest long browser test exposed 512 requests/minute proxy limits even at four seats; earlier “no API errors” reports did not fully account for sync errors and are superseded by the fresh transport verification below.
+- [ ] Complete fresh four-session streaming stress run, including every HTTP error in its result.
+- [ ] Run the prepared container image and recovery test on GitHub Actions.
