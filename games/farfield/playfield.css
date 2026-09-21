@@ -1,0 +1,1497 @@
+/* The map is the screen. Interface surfaces float above it. */
+.immersive-game {
+  height: 100dvh;
+  min-height: 0;
+  display: block;
+  overflow: hidden;
+  font-family: ui-monospace, monospace;
+  background: #09141d;
+}
+.world-stage {
+  position: absolute;
+  inset: 0;
+}
+.world-stage .map-wrap {
+  width: 100%;
+  height: 100%;
+}
+.world-stage canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.flight-hud {
+  position: absolute;
+  z-index: 4;
+  left: 16px;
+  right: 16px;
+  top: max(12px, env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  pointer-events: none;
+}
+.flight-hud > * {
+  pointer-events: auto;
+}
+.flight-brand {
+  font-size: 23px;
+  color: #d4e4b8;
+  letter-spacing: 3px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.flight-brand span {
+  font-size: 14px;
+}
+.flight-resources {
+  display: flex;
+  gap: 4px;
+  background: #12232de8;
+  border: 1px solid #344a53;
+  border-radius: 8px;
+  padding: 4px;
+  margin: auto;
+}
+.flight-resources button {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 8px;
+  border: 0;
+  border-right: 1px solid #34454a;
+  border-radius: 0;
+  padding: 6px 20px;
+  background: transparent;
+  min-width: 95px;
+  text-align: left;
+}
+.flight-resources button:last-child {
+  border-right: 0;
+}
+.flight-resources button > span {
+  grid-row: span 2;
+  align-self: center;
+  font-size: 24px;
+}
+.flight-resources strong {
+  font-size: 18px;
+}
+.flight-resources small {
+  font-size: 8px;
+  color: #91a9af;
+  letter-spacing: 1px;
+}
+.flight-resources i {
+  font-size: 12px;
+  font-style: normal;
+  color: #8eabb0;
+}
+.menu-trigger {
+  background: #182a32ee;
+  padding: 12px 16px;
+}
+.sector-status {
+  position: absolute;
+  top: 84px;
+  right: 20px;
+  display: flex;
+  gap: 16px;
+  font-size: 10px;
+  color: #a8bfba;
+  pointer-events: none;
+  padding: 9px 12px;
+  border-radius: 5px;
+  background: #0b1821b3;
+}
+.pilot-status {
+  position: absolute;
+  left: 20px;
+  top: 86px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #172c26e6;
+  border: 1px solid #576d4a;
+  border-radius: 7px;
+  padding: 8px;
+}
+.pilot-status .friend-portrait {
+  width: 40px;
+  height: 40px;
+}
+.pilot-status strong {
+  font-size: 11px;
+}
+.pilot-status span {
+  display: block;
+  font-size: 10px;
+  color: #bad0b7;
+  margin-top: 5px;
+}
+.pilot-status button {
+  padding: 6px 8px;
+  min-height: 32px;
+}
+.pilot-status > div {
+  min-width: 130px;
+}
+.command-bar {
+  position: absolute;
+  z-index: 4;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: #11232de8;
+  border: 1px solid #3b5158;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px #0006;
+}
+.command-bar button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 8px 18px;
+  font-size: 20px;
+  background: #1c3139;
+  border: 1px solid transparent;
+}
+.command-bar span {
+  font-size: 12px;
+}
+.command-bar button[aria-pressed="true"] {
+  border-color: #c5dba6;
+  color: #d3e7b2;
+  background: #2e4436;
+}
+.command-drawer {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 88px;
+  width: min(720px, calc(100% - 32px));
+  max-height: calc(100dvh - 180px);
+  overflow: auto;
+  background: #11232df5;
+  border: 1px solid #4b6165;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 15px 60px #0009;
+}
+.drawer-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.drawer-heading > strong {
+  margin-right: auto;
+}
+.drawer-heading > span {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  gap: 8px;
+}
+.drawer-heading svg {
+  width: 30px;
+  height: 26px;
+}
+.drawer-heading button {
+  font-size: 20px;
+  padding: 2px 10px;
+}
+.build-palette nav {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.build-palette nav button {
+  text-align: left;
+  display: grid;
+  grid-template-columns: 25px 1fr;
+  gap: 8px;
+  padding: 12px;
+}
+.build-palette nav button > span {
+  font-size: 22px;
+}
+.build-palette nav strong {
+  align-self: center;
+  font-size: 13px;
+}
+.build-palette nav small,
+.build-palette nav p {
+  grid-column: 1/-1;
+  margin: 0;
+  font-size: 10px;
+  color: #a9bec0;
+  line-height: 1.6;
+}
+.build-palette nav p {
+  font-size: 11px;
+}
+.build-palette nav button[data-recommended="true"] {
+  border-color: #bfd399;
+}
+.gather-palette {
+  max-width: 440px;
+}
+.gather-palette p {
+  font-size: 12px;
+  color: #9fb8b8;
+}
+.gather-palette > button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin: 8px 0;
+  padding: 15px;
+  text-transform: capitalize;
+}
+.gather-palette small {
+  font-size: 11px;
+  color: #a5bcb7;
+}
+.context-command {
+  position: absolute;
+  z-index: 3;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(680px, calc(100% - 32px));
+  background: #10232de8;
+  border: 1px solid #4e6265;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 12px 35px #0006;
+}
+.context-command > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.context-command strong {
+  font-size: 14px;
+}
+.context-command p {
+  font-size: 11px;
+  margin: 6px 0;
+  color: #b0c4bd;
+  line-height: 1.5;
+}
+.context-command [role="status"],
+.context-command > div > span {
+  font-size: 10px;
+  color: #c7d7ac;
+}
+.context-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+}
+.context-buttons button {
+  font-size: 11px;
+  padding: 9px;
+}
+.context-buttons small {
+  display: block;
+  font-size: 9px;
+  margin-top: 4px;
+}
+.objective-hint {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 90px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #0d201cce;
+  border: 1px solid #3b5347;
+  color: #b8cda9;
+  font-size: 11px;
+  max-width: calc(100% - 32px);
+}
+.objective-hint small {
+  padding: 2px 4px;
+  border: 1px solid #71845e;
+  border-radius: 50%;
+}
+.launch-ribbon {
+  position: absolute;
+  z-index: 3;
+  top: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 18px;
+  background: #142931ed;
+  border: 1px solid #6a805e;
+  border-radius: 8px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  width: max-content;
+  max-width: calc(100% - 32px);
+}
+.launch-ribbon > div span {
+  display: block;
+  color: #abc1b5;
+  font-size: 11px;
+  margin-top: 6px;
+}
+.launch-ribbon strong {
+  font-size: 14px;
+}
+.launch-ribbon button {
+  font-size: 12px;
+}
+.command-toast {
+  position: absolute;
+  z-index: 8;
+  top: 155px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  width: max-content;
+  padding: 10px 12px;
+  background: #392b2bf2;
+  border: 1px solid #b78b76;
+  border-radius: 6px;
+  font-size: 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.immersive-game .sector-label,
+.immersive-game .compass {
+  display: none;
+}
+.immersive-game .map-controls {
+  bottom: 100px;
+  right: 18px;
+  background: #12262ce6;
+}
+.immersive-game .map-hint {
+  bottom: 100px;
+}
+.immersive-game .watching-banner {
+  top: 150px;
+}
+.immersive-game .dialog {
+  max-height: calc(100dvh - 36px);
+  width: min(640px, calc(100% - 28px));
+}
+.immersive-game .dialog-body {
+  font-size: 13px;
+}
+.immersive-game .dialog-title {
+  padding: 16px;
+}
+.immersive-game .lobby-card {
+  max-height: 90dvh;
+  overflow: auto;
+}
+.immersive-game .lobby-card h1 {
+  font-size: 48px;
+}
+.invite-code {
+  display: grid;
+  gap: 8px;
+  color: #a8c0b4;
+  font-size: 12px;
+}
+.invite-code input {
+  font-size: 23px;
+  letter-spacing: 3px;
+  color: #d6e7b6;
+  text-align: center;
+}
+.match-roster {
+  display: grid;
+  gap: 8px;
+  margin: 22px 0;
+}
+.match-roster > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #344b54;
+  border-radius: 5px;
+}
+.match-roster strong {
+  font-size: 12px;
+  flex: 1;
+}
+.match-roster small {
+  font-size: 10px;
+  text-transform: capitalize;
+}
+.forfeit-section {
+  margin-top: 24px;
+  border-top: 1px solid #344850;
+  padding-top: 20px;
+}
+.next-objective {
+  padding: 16px;
+  border: 1px solid #789063;
+  border-radius: 6px;
+  background: #27382c;
+}
+.immersive-game .note {
+  font-size: 11px;
+  color: #a4b7b9;
+}
+@media (max-width: 900px) {
+  .flight-brand span {
+    display: none;
+  }
+  .flight-resources button {
+    padding: 6px 12px;
+    min-width: 75px;
+  }
+  .context-command {
+    bottom: 100px;
+  }
+  .immersive-game .map-controls {
+    bottom: 180px;
+  }
+  .sector-status {
+    font-size: 9px;
+    gap: 8px;
+  }
+  .build-palette nav {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .immersive-game .world-stage {
+    min-height: 0;
+  }
+}
+@media (max-width: 600px) {
+  .flight-hud {
+    left: 8px;
+    right: 8px;
+    top: max(8px, env(safe-area-inset-top));
+    gap: 6px;
+  }
+  .flight-brand {
+    display: none;
+  }
+  .flight-resources {
+    flex: 1;
+    gap: 0;
+    padding: 3px;
+    margin: 0;
+  }
+  .flight-resources button {
+    min-width: 0;
+    flex: 1;
+    padding: 5px 6px;
+    gap: 3px 5px;
+  }
+  .flight-resources button > span {
+    font-size: 16px;
+  }
+  .flight-resources strong {
+    font-size: 15px;
+  }
+  .flight-resources small {
+    font-size: 6px;
+    letter-spacing: 0.4px;
+  }
+  .flight-resources i {
+    font-size: 9px;
+  }
+  .menu-trigger {
+    padding: 8px 11px;
+    min-height: 48px;
+  }
+  .menu-trigger span {
+    display: none;
+  }
+  .pilot-status {
+    left: 8px;
+    top: 70px;
+    padding: 5px;
+    gap: 6px;
+  }
+  .pilot-status .friend-portrait {
+    width: 30px;
+    height: 30px;
+  }
+  .pilot-status > div {
+    min-width: 105px;
+  }
+  .pilot-status strong {
+    font-size: 10px;
+  }
+  .pilot-status span {
+    font-size: 9px;
+  }
+  .pilot-status button {
+    padding: 4px 7px;
+    min-height: 30px;
+  }
+  .sector-status {
+    top: 118px;
+    left: 8px;
+    right: auto;
+    padding: 6px 8px;
+    font-size: 8px;
+  }
+  .command-bar {
+    bottom: max(8px, env(safe-area-inset-bottom));
+    width: calc(100% - 16px);
+    gap: 3px;
+    padding: 4px;
+    border-radius: 8px;
+  }
+  .command-bar button {
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 7px 3px;
+    font-size: 19px;
+    min-height: 54px;
+  }
+  .command-bar span {
+    font-size: 8px;
+    white-space: nowrap;
+  }
+  .command-drawer {
+    bottom: 80px;
+    max-height: calc(100dvh - 160px);
+    width: calc(100% - 16px);
+    padding: 12px;
+  }
+  .drawer-heading > strong {
+    font-size: 12px;
+  }
+  .build-palette nav button {
+    padding: 10px;
+    gap: 5px;
+  }
+  .build-palette nav strong {
+    font-size: 12px;
+  }
+  .build-palette nav p {
+    font-size: 10px;
+  }
+  .context-command {
+    bottom: 80px;
+    width: calc(100% - 16px);
+    display: block;
+    padding: 10px 12px;
+  }
+  .context-command p {
+    font-size: 10px;
+    line-height: 1.5;
+    margin: 4px 0 8px;
+  }
+  .context-buttons {
+    margin-top: 8px;
+    max-width: none;
+  }
+  .context-buttons button {
+    flex: 1;
+    min-height: 38px;
+    font-size: 10px;
+  }
+  .context-buttons button:last-child {
+    flex: 0;
+    padding: 8px 12px;
+  }
+  .context-command strong {
+    font-size: 12px;
+  }
+  .objective-hint {
+    bottom: 82px;
+    font-size: 9px;
+    white-space: normal;
+    text-align: left;
+    width: max-content;
+  }
+  .immersive-game .map-controls {
+    bottom: 190px;
+    right: 8px;
+    padding: 3px;
+  }
+  .immersive-game .map-controls button {
+    min-width: 28px;
+    padding: 5px;
+  }
+  .immersive-game .map-hint {
+    display: none;
+  }
+  .launch-ribbon {
+    top: 156px;
+    padding: 12px;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: calc(100% - 24px);
+    max-width: none;
+  }
+  .launch-ribbon > div {
+    width: 100%;
+  }
+  .launch-ribbon strong {
+    font-size: 13px;
+  }
+  .command-toast {
+    top: 155px;
+    font-size: 11px;
+    width: calc(100% - 20px);
+  }
+  .immersive-game .dialog {
+    max-height: calc(100dvh - 20px);
+  }
+  .immersive-game .dialog-body {
+    padding: 16px;
+  }
+  .immersive-game .dialog-title h2 {
+    font-size: 22px;
+  }
+  .immersive-game .watching-banner {
+    top: 150px;
+  }
+  .immersive-game .lobby-card h1 {
+    font-size: 36px;
+  }
+}
+@media (max-width: 600px) {
+  .immersive-game.has-context .map-controls {
+    bottom: 270px;
+  }
+}
+
+/* Compact, movable command dock; the world never changes size. */
+.immersive-game .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.flight-hud {
+  gap: 8px;
+}
+.flight-resources {
+  margin: 0;
+  padding: 2px;
+  gap: 0;
+  border-radius: 5px;
+}
+.flight-resources button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 7px 12px;
+  min-height: 34px;
+}
+.flight-resources button > span {
+  font-size: 17px;
+}
+.flight-resources strong {
+  font-size: 14px;
+  font-weight: normal;
+}
+.flight-resources small {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+.flight-resources i {
+  font-size: 10px;
+}
+.menu-trigger {
+  margin-left: auto;
+  min-height: 38px;
+  padding: 8px 12px;
+}
+.menu-trigger span {
+  display: none;
+}
+.sector-status {
+  top: 58px;
+  left: 16px;
+  right: auto;
+  background: transparent;
+  padding: 0;
+  font-size: 9px;
+  gap: 10px;
+}
+.command-bar {
+  width: auto;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 7px;
+}
+.command-bar button {
+  min-height: 48px;
+  min-width: 70px;
+  padding: 6px 12px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  font-size: 19px;
+}
+.command-bar span {
+  font-size: 10px;
+}
+.command-drawer {
+  width: min(420px, calc(100% - 24px));
+  max-height: min(400px, calc(100dvh - 160px));
+  padding: 12px;
+  bottom: 84px;
+  border-radius: 7px;
+  animation: drawer-open 160ms ease-out;
+  transform-origin: bottom center;
+}
+@keyframes drawer-open {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+    scale: 0.97;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+.build-palette nav {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+.build-palette nav button {
+  padding: 9px;
+  gap: 4px 8px;
+}
+.build-palette nav strong {
+  font-size: 12px;
+}
+.build-palette nav small {
+  font-size: 10px;
+}
+.drawer-heading {
+  margin-bottom: 10px;
+}
+.drawer-heading > strong {
+  font-size: 13px;
+}
+.drawer-heading button {
+  min-height: 32px;
+}
+.crew-cost {
+  font-size: 11px;
+  color: #9bb5ad;
+  margin: 0 0 12px;
+}
+.worker-palette .recruit-list {
+  gap: 6px;
+}
+.worker-palette .recruit-row {
+  padding: 10px 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+.worker-palette .recruit-row strong {
+  font-size: 12px;
+}
+.worker-palette .recruit-row small {
+  font-size: 9px;
+}
+.worker-palette .recruit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 235px;
+  justify-content: flex-end;
+}
+.worker-palette .recruit-actions button {
+  padding: 7px;
+  font-size: 10px;
+  min-height: 34px;
+}
+.worker-palette h3,
+.worker-palette .worker-roster {
+  font-size: 11px;
+}
+.context-command {
+  width: min(440px, calc(100% - 24px));
+  bottom: 84px;
+  padding: 10px 12px;
+  gap: 10px;
+}
+.context-command p {
+  font-size: 10px;
+}
+.context-command strong {
+  font-size: 12px;
+}
+.context-buttons {
+  max-width: 210px;
+}
+.context-buttons button {
+  padding: 7px;
+  font-size: 10px;
+}
+.objective-hint {
+  bottom: 84px;
+  font-size: 10px;
+}
+.launch-ribbon {
+  top: 92px;
+  padding: 10px 12px;
+}
+.command-toast {
+  top: 88px;
+}
+.immersive-game .map-controls,
+.immersive-game.has-context .map-controls {
+  bottom: max(16px, env(safe-area-inset-bottom));
+  right: 16px;
+  padding: 3px;
+}
+.immersive-game .map-controls button {
+  min-width: 28px;
+  padding: 5px;
+}
+.immersive-game .map-hint {
+  display: none;
+}
+.immersive-game .watching-banner {
+  top: 84px;
+}
+.immersive-game[data-dock="left"] .command-bar,
+.immersive-game[data-dock="right"] .command-bar {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  flex-direction: column;
+}
+.immersive-game[data-dock="left"] .command-bar {
+  left: max(12px, env(safe-area-inset-left));
+}
+.immersive-game[data-dock="right"] .command-bar {
+  right: max(12px, env(safe-area-inset-right));
+  left: auto;
+}
+.immersive-game[data-dock="left"] .command-drawer,
+.immersive-game[data-dock="right"] .command-drawer {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  max-height: min(400px, calc(100dvh - 140px));
+  width: min(420px, calc(100% - 110px));
+}
+.immersive-game[data-dock="left"] .command-drawer {
+  left: 102px;
+  transform-origin: left center;
+}
+.immersive-game[data-dock="right"] .command-drawer {
+  right: 102px;
+  left: auto;
+  transform-origin: right center;
+}
+.immersive-game[data-dock="left"] .objective-hint,
+.immersive-game[data-dock="right"] .objective-hint {
+  bottom: 24px;
+}
+.immersive-game[data-dock="left"] .context-command,
+.immersive-game[data-dock="right"] .context-command {
+  bottom: 66px;
+}
+.setting-row select {
+  color: #cddfbc;
+  background: #182a31;
+  border: 1px solid #52715e;
+  padding: 8px;
+  font: inherit;
+}
+.rivals-palette .rivals > h3 {
+  display: none;
+}
+.rivals-palette .rival-card {
+  padding: 12px;
+}
+.rivals-palette .rival-title {
+  font-size: 12px;
+}
+.rivals-palette .station-thumbnail {
+  height: 100px;
+}
+.rivals-palette .fleet-note {
+  font-size: 10px;
+}
+.unknown-station {
+  border: 1px dashed #557276;
+  padding: 22px;
+  text-align: center;
+  color: #91a9a5;
+  font-size: 12px;
+  margin: 12px 0;
+}
+@media (max-width: 600px) {
+  .flight-resources {
+    flex: 0 1 auto;
+  }
+  .flight-resources button {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  .flight-resources strong {
+    font-size: 13px;
+  }
+  .flight-resources button > span {
+    font-size: 14px;
+  }
+  .sector-status {
+    left: 10px;
+    top: 52px;
+    font-size: 8px;
+  }
+  .command-bar {
+    width: auto;
+    bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  .command-bar button {
+    min-width: 66px;
+    min-height: 46px;
+    padding: 5px 10px;
+  }
+  .command-bar span {
+    font-size: 9px;
+  }
+  .immersive-game .map-controls,
+  .immersive-game.has-context .map-controls {
+    bottom: 78px;
+    right: 8px;
+  }
+  .context-command {
+    bottom: 120px;
+  }
+  .objective-hint {
+    bottom: 112px;
+  }
+  .command-drawer {
+    bottom: 76px;
+    max-height: min(380px, calc(100dvh - 170px));
+  }
+  .launch-ribbon {
+    top: 84px;
+  }
+  .immersive-game[data-dock="left"] .command-bar {
+    left: 8px;
+  }
+  .immersive-game[data-dock="right"] .command-bar {
+    right: 8px;
+  }
+  .immersive-game[data-dock="left"] .command-bar button,
+  .immersive-game[data-dock="right"] .command-bar button {
+    min-width: 50px;
+    padding: 6px;
+  }
+  .immersive-game[data-dock="left"] .command-drawer {
+    left: 76px;
+    width: calc(100% - 84px);
+  }
+  .immersive-game[data-dock="right"] .command-drawer {
+    right: 76px;
+    width: calc(100% - 84px);
+  }
+  .immersive-game:not([data-dock="bottom"]) .build-palette nav {
+    grid-template-columns: 1fr;
+  }
+  .immersive-game:not([data-dock="bottom"]) .recruit-row {
+    grid-template-columns: 1fr;
+  }
+  .immersive-game:not([data-dock="bottom"]) .recruit-actions {
+    justify-content: flex-start;
+  }
+  .immersive-game:not([data-dock="bottom"]) .map-controls {
+    bottom: 60px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .command-drawer {
+    animation: none;
+  }
+}
+.immersive-game[data-reduced="true"] .command-drawer {
+  animation: none;
+}
+/* Keep all six allocation rows visible without the old worker roster scrolling. */
+.immersive-game .worker-palette.command-drawer {
+  max-height: min(520px, calc(100dvh - 160px));
+}
+/* Results replace all play controls and reach every edge of the game viewport. */
+.immersive-game .result-screen {
+  inset: 0;
+  z-index: 20;
+  padding: clamp(24px, 5vw, 80px);
+  background: linear-gradient(90deg, #0c141ff5, #0c141fdc 55%, #0c141fb3);
+  backdrop-filter: blur(5px);
+  outline: none;
+}
+.immersive-game[data-ended="true"] .flight-hud,
+.immersive-game[data-ended="true"] .command-bar,
+.immersive-game[data-ended="true"] .command-drawer,
+.immersive-game[data-ended="true"] .context-command,
+.immersive-game[data-ended="true"] .objective-hint,
+.immersive-game[data-ended="true"] .map-controls,
+.immersive-game[data-ended="true"] .map-hint,
+.immersive-game[data-ended="true"] .watching-banner,
+.immersive-game[data-ended="true"] .command-toast {
+  display: none;
+}
+/* Shared battlefield: two primary controls and a compact public objective strip. */
+.shared-objectives {
+  position: absolute;
+  z-index: 6;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  pointer-events: auto;
+}
+.shared-objectives button {
+  background: #11242dea;
+  border: 1px solid #47616a;
+  font: 13px monospace;
+  padding: 5px 10px;
+  min-height: 40px;
+  color: #a5b8be;
+}
+.shared-objectives small {
+  display: block;
+  font-size: 8px;
+  margin-top: 3px;
+}
+.shared-objectives button[data-owned="true"] {
+  color: #d9ecb4;
+  border-color: #c4dca3;
+}
+.shared-objectives button[data-contested="true"] {
+  color: #f7a3a8;
+  border-color: #ed8c97;
+}
+.shared-objectives strong {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 8px;
+  background: #27332b;
+  font-size: 12px;
+}
+.guard-orders {
+  display: flex;
+  gap: 5px;
+  margin: 6px 0;
+}
+.guard-orders button {
+  flex: 1;
+  font-size: 11px;
+  padding: 7px;
+}
+.crew-job {
+  min-height: 40px;
+}
+@media (max-width: 700px) {
+  .shared-objectives {
+    top: 80px;
+  }
+  .shared-objectives button {
+    padding: 4px 8px;
+    min-height: 34px;
+  }
+  .guard-orders button {
+    font-size: 10px;
+    padding: 5px;
+  }
+  .crew-job {
+    min-height: 34px;
+  }
+  .worker-palette .crew-jobs {
+    gap: 2px;
+  }
+}
+.immersive-game .worker-palette.command-drawer {
+  max-height: min(580px, calc(100dvh - 150px));
+}
+.worker-palette .crew-job {
+  padding: 3px 0;
+}
+
+.touch-zoom-hint {
+  display: none;
+}
+@media (pointer: coarse) {
+  .mouse-zoom-hint {
+    display: none;
+  }
+  .touch-zoom-hint {
+    display: inline;
+  }
+}
+/* Drawers must receive taps above the objective strip, including on short screens. */
+.command-drawer {
+  z-index: 8;
+  overscroll-behavior: contain;
+}
+.command-drawer .drawer-heading {
+  position: sticky;
+  top: -12px;
+  z-index: 1;
+  background: #11232d;
+  padding: 6px 0;
+}
+@media (pointer: coarse) {
+  .drawer-heading button {
+    min-width: 44px;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+}
+.ability-bar {
+  position: absolute;
+  z-index: 4;
+  left: 12px;
+  bottom: 16px;
+  display: flex;
+  gap: 6px;
+}
+.ability-bar button {
+  min-width: 66px;
+  min-height: 48px;
+  padding: 6px 10px;
+  background: #142a35;
+  border: 1px solid #6898ab;
+}
+.ability-bar strong,
+.ability-bar small {
+  display: block;
+  font-size: 11px;
+}
+.ability-bar small {
+  color: #e8d179;
+  margin-top: 4px;
+}
+.ability-bar kbd {
+  font-size: 9px;
+  opacity: 0.6;
+}
+.ability-bar button[data-active="true"] {
+  border-color: #91dfff;
+  background: #234858;
+}
+.immersive-game:not([data-dock="bottom"]) .ability-bar {
+  left: 50%;
+  transform: translateX(-50%);
+}
+@media (max-width: 600px) {
+  .ability-bar {
+    bottom: 78px;
+    left: 8px;
+    gap: 4px;
+  }
+  .ability-bar button {
+    min-width: 54px;
+    padding: 5px;
+  }
+  .immersive-game .map-controls,
+  .immersive-game.has-context .map-controls {
+    bottom: 78px;
+  }
+  .immersive-game:not([data-dock="bottom"]) .ability-bar {
+    bottom: 10px;
+  }
+  .immersive-game:not([data-dock="bottom"]) .map-controls {
+    bottom: 70px;
+  }
+}
+@media (pointer: coarse) {
+  .ability-bar kbd {
+    display: none;
+  }
+}
+.combat-readout {
+  position: absolute;
+  top: 78px;
+  left: 16px;
+  z-index: 3;
+  color: #ffbc9f;
+  font:
+    11px ui-monospace,
+    monospace;
+  pointer-events: none;
+}
+@media (max-width: 700px) {
+  .combat-readout {
+    top: 124px;
+    left: 10px;
+    font-size: 9px;
+  }
+}
+@media (max-width: 700px) {
+  .combat-readout {
+    top: 142px;
+    right: 10px;
+  }
+}
+@media (max-width: 600px) {
+  .objective-hint,
+  .context-command {
+    bottom: 140px;
+  }
+}
+
+/* One shallow action rail: building inspection never covers the playfield. */
+.immersive-game .action-dock {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  width: max-content;
+  max-width: calc(100% - 400px);
+  height: 62px;
+}
+.immersive-game .action-dock .command-bar {
+  position: static;
+  transform: none;
+  flex-direction: row;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+.immersive-game .action-dock .context-command {
+  position: static;
+  transform: none;
+  width: auto;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  background: #10232df5;
+  box-shadow: none;
+  animation: drawer-open 140ms ease-out;
+}
+
+.immersive-game .context-command strong {
+  display: block;
+  font-size: 11px;
+}
+.immersive-game .context-command > div > span {
+  display: block;
+  font-size: 9px;
+  line-height: 1.3;
+  margin-top: 3px;
+}
+.immersive-game .context-buttons {
+  flex-wrap: nowrap;
+  max-width: none;
+  align-items: stretch;
+}
+.immersive-game .context-buttons button {
+  flex-shrink: 0;
+  min-height: 44px;
+  max-width: 110px;
+  font-size: 10px;
+  padding: 4px 8px;
+}
+.immersive-game .context-buttons small {
+  margin-top: 2px;
+  font-size: 8px;
+}
+.immersive-game[data-ended="true"] .action-dock {
+  display: none;
+}
+.immersive-game[data-dock="left"] .action-dock,
+.immersive-game[data-dock="right"] .action-dock {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  max-width: calc(100% - 24px);
+}
+.immersive-game[data-dock="left"] .action-dock {
+  left: 12px;
+}
+.immersive-game[data-dock="right"] .action-dock {
+  left: auto;
+  right: 12px;
+  flex-direction: row-reverse;
+}
+@media (max-width: 1000px) {
+  .immersive-game .action-dock {
+    max-width: calc(100% - 16px);
+  }
+  .immersive-game .action-dock .command-bar button {
+    min-width: 48px;
+    padding: 4px;
+  }
+}
+.immersive-game[data-dock="left"] .action-dock,
+.immersive-game[data-dock="right"] .action-dock {
+  height: 120px;
+}
+.immersive-game[data-dock="left"] .action-dock .command-bar,
+.immersive-game[data-dock="right"] .action-dock .command-bar {
+  flex-direction: column;
+}
+.immersive-game .action-dock .context-command {
+  display: flex;
+  flex-direction: row;
+}
+.immersive-game .action-dock .context-buttons {
+  margin-top: 0;
+  width: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1000px) {
+  .immersive-game[data-dock="bottom"] .map-controls,
+  .immersive-game[data-dock="bottom"] .ability-bar {
+    bottom: max(84px, calc(env(safe-area-inset-bottom) + 78px));
+  }
+}
+
+@media (max-width: 700px) {
+}
+/* Combat modes are immediate icon actions beside the abilities. */
+.immersive-game .ability-bar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  left: 12px;
+  transform: none;
+}
+.ability-bar .combat-mode-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  min-height: 44px;
+  padding: 4px;
+  color: #b6cfb1;
+  border-color: #58786c;
+  background: #182d2b;
+}
+.ability-bar .combat-mode-toggle[aria-pressed="true"] {
+  color: #f4b5a9;
+  border-color: #ba786f;
+  background: #3a292c;
+}
+.mode-unit-icon {
+  width: 28px;
+  height: 28px;
+  margin-right: 14px;
+}
+.mode-state-icon {
+  width: 15px;
+  height: 15px;
+  position: absolute;
+  right: 5px;
+  bottom: 6px;
+}
+.shape-picker kbd,
+.build-palette kbd {
+  font-size: 9px;
+  opacity: 0.65;
+}
+@media (max-width: 600px) {
+  .immersive-game .ability-bar {
+    left: 8px;
+  }
+  .immersive-game:not([data-dock="bottom"]) .map-controls {
+    bottom: 10px;
+  }
+}
+@media (pointer: coarse) {
+  .shape-picker kbd,
+  .build-palette kbd {
+    display: none;
+  }
+}
+/* Compact icon actions; selection names remain on the level and in accessible labels. */
+.immersive-game .action-dock {
+  height: 54px;
+}
+.immersive-game .action-dock .command-bar {
+  padding: 3px;
+  gap: 2px;
+}
+.immersive-game .action-dock .command-bar button,
+.immersive-game .action-dock .context-buttons button {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 44px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 3px;
+  box-sizing: border-box;
+}
+.immersive-game .action-dock .command-bar kbd {
+  font-size: 8px;
+  opacity: 0.65;
+}
+.immersive-game .action-dock .context-command {
+  padding: 4px;
+  gap: 0;
+}
+.immersive-game .action-dock .context-buttons {
+  max-width: none;
+  min-width: max-content;
+  gap: 4px;
+}
+.immersive-game .context-buttons button[aria-pressed="true"] {
+  border-color: #c7d7ac;
+  background: #30483c;
+}
+.immersive-game .context-buttons small {
+  font-size: 8px;
+  white-space: nowrap;
+  margin: 0;
+}
+.action-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.immersive-game[data-dock="left"] .action-dock,
+.immersive-game[data-dock="right"] .action-dock {
+  height: 102px;
+}

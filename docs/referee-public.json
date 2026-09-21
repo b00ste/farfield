@@ -1,0 +1,11 @@
+{
+  "address": "0x6C2c8c529e4922d2D9fAD488A8B140A00FA4cF19",
+  "chainId": 4663,
+  "balanceEth": "0",
+  "gasPriceWei": "57444000",
+  "block": "68100727",
+  "deploymentGas": "1339153",
+  "estimatedDeploymentEth": "0.000076926304932",
+  "checkedAt": "2026-09-20T16:59:59.463Z",
+  "deployed": false
+}

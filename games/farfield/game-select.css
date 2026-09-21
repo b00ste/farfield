@@ -1,0 +1,69 @@
+.ff-select {
+  display: inline-block;
+  min-width: 0;
+  width: 100%;
+}
+.ff-select > button.ff-select-trigger {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  border: 1px solid #526960;
+  border-radius: 3px;
+  background: #172c30;
+  color: #d9e7cd;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.ff-select > button.ff-select-trigger:hover,
+.ff-select > button.ff-select-trigger[aria-expanded="true"] {
+  border-color: #c7dca9;
+  background: #293f36;
+}
+.ff-select > button.ff-select-trigger:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ff-select-trigger:focus-visible,
+.ff-select-options:focus-visible {
+  outline: 2px solid #cee9a8;
+  outline-offset: 3px;
+}
+.ff-select-options {
+  position: fixed;
+  z-index: 10000;
+  box-sizing: border-box;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #10232a;
+  color: #d9e7cd;
+  border: 1px solid #749080;
+  border-radius: 4px;
+  box-shadow: 0 10px 28px #0008;
+  padding: 4px;
+  font:
+    14px ui-monospace,
+    monospace;
+}
+.ff-select-options > .ff-select-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.ff-select-option[data-active="true"] {
+  background: #304c40;
+}
+.ff-select-option[aria-selected="true"] {
+  color: #def2ba;
+}
+.setting-row > .ff-select {
+  width: 150px;
+}

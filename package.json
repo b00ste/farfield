@@ -1,0 +1,61 @@
+{
+  "name": "farfield",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A Rare Friends space-station strategy game with PvP and solo AI rivals",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && node dist/server.mjs",
+    "start": "node dist/server.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "friendsdk check games/farfield",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:browser": "node tests/submission-browser.mjs && node tests/touch-browser.mjs",
+    "test:wallet": "node tests/wallet-browser.mjs",
+    "test:walletconnect": "node tests/walletconnect-smoke.mjs",
+    "test:rpc": "node tests/rpc-browser.mjs",
+    "test:arena": "node tests/arena-browser.mjs",
+    "test:friend": "node tests/friend-browser.mjs",
+    "test:playfield": "node tests/shared-battlefield-browser.mjs",
+    "test:contracts": "forge test --root contracts",
+    "test:wagers": "node --experimental-strip-types tests/wager-integration.ts",
+    "test:menu": "node tests/title-menu-browser.mjs",
+    "test:placement": "node tests/shared-battlefield-browser.mjs",
+    "test:commander": "node tests/commander-browser.mjs",
+    "test:roster-loading": "node tests/roster-loading-browser.mjs",
+    "test:battlefield": "node tests/shared-battlefield-browser.mjs",
+    "test:touch": "node tests/touch-browser.mjs",
+    "test:combat": "node tests/combat-browser.mjs",
+    "benchmark": "node --experimental-strip-types scripts/benchmark.ts",
+    "test:live": "node tests/live-four-player.mjs",
+    "test:submission": "node tests/submission-browser.mjs",
+    "test:online": "node tests/online-live.mjs",
+    "test:load": "node tests/live-http-load.mjs"
+  },
+  "dependencies": {
+    "@rainbow-me/rainbowkit": "^2.2.11",
+    "@rarefriends/friendsdk": "file:vendor/rarefriends-friendsdk-0.1.2.tgz",
+    "@tanstack/react-query": "^5.103.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "viem": "^2.56.3",
+    "wagmi": "^2.19.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3"
+  },
+  "overrides": {
+    "ws@^8.0.0": "^8.21.0",
+    "cuer": {
+      "qr": "0.5.5"
+    }
+  }
+}

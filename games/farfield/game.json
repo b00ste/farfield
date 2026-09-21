@@ -1,0 +1,12 @@
+{
+  "name": "Farfield",
+  "consumable": "Unused runtime reference",
+  "price": "1000000000000000000",
+  "outcomes": [
+    {
+      "name": "Unused reference outcome",
+      "chanceBps": 10000,
+      "reward": "1000000000000000000"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+:root {
+  color-scheme: dark;
+  --rf-game-max-width: 100%;
+  --rf-game-aspect-ratio: auto;
+}
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #0a1019;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100dvh;
+  align-items: stretch;
+  justify-items: center;
+}
+#root {
+  width: 100%;
+}
+.rf-game-frame {
+  width: 100%;
+  max-width: none;
+  height: calc(100dvh - 32px);
+  min-height: 600px;
+  aspect-ratio: auto;
+  margin: auto;
+  border-color: #283340;
+  background: #0d1520;
+  color: #e6e9df;
+  border-radius: 12px;
+}
+.rf-frame-toolbar > *,
+.rf-game-frame button,
+.rf-frame-scrim button {
+  background: #19232e;
+  color: #e6e9df;
+  border-color: #34434e;
+  border-radius: 6px;
+}
+.rf-frame-toolbar {
+  bottom: 12px;
+}
+.rf-frame-mode {
+  color: #a5b6bd;
+}
+.rf-game-frame button:hover:not(:disabled),
+.rf-frame-scrim button:hover:not(:disabled) {
+  background: #2a3b45;
+}
+.rf-frame-scrim {
+  background: #050b13bb;
+  color: #e6e9df;
+}
+.rf-frame-menu,
+.rf-runtime-status {
+  background: #101c29;
+  color: #e6e9df;
+  border-color: #34434e;
+}
+.rf-frame-menu-heading {
+  border-color: #34434e;
+}
+.rf-game-frame .rf-frame-primary {
+  background: #b9d8c6;
+  color: #15261f;
+}
+.rf-game-frame button:focus-visible {
+  outline-color: #cce5c6;
+}
+@media (max-width: 600px) {
+  :root {
+    --rf-game-aspect-ratio: auto;
+  }
+  .rf-game-frame {
+    height: 100dvh;
+    min-height: 600px;
+    border-radius: 0;
+    border: 0;
+  }
+  body {
+    display: block;
+  }
+  .rf-frame-toolbar {
+    bottom: 10px;
+  }
+}
