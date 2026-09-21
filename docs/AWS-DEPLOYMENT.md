@@ -83,3 +83,11 @@ Release `6ac15964435a99135db5964d86b56d40aca4b9a6`, browser build `f8a6f994086d2
 Image `sha256:3c4c99da67dae7659869a4c700301233f2e209c8d60863477396140117732e72`; safe runtime comparisons confirmed the private RPC still matches its parameter and the runtime file remains mode `0600`. Post-release backup succeeded. Operational evidence: `artifacts/aws-release-6ac15964.json`.
 
 Public desktop/iPad/iPhone connector checks passed direct entries and real QR/mobile-link generation. No wallet connection was approved; physical Safari handoff remains a device check, including a mobile Chromium native-launch user-gesture warning noted in VALIDATION. Evidence: `artifacts/wallet-options-production.json`.
+
+## Free online release
+
+Application release `fb46a893644ef524ce1e553875a37a1f05831721`, browser build `e19f511263f52c83`, puts free Online PvP first in the title menu, followed by Friends & AI and Join friends. Both [push CI](https://github.com/b00ste/farfield/actions/runs/35609184952) and [PR CI](https://github.com/b00ste/farfield/actions/runs/35609193002) passed, including 94 logic/server tests, process recovery, sustained event streams and the production container. The release is also merged into the source repository's main branch.
+
+Runtime image: `sha256:846459eb8021d0546697b76a874d9e79016444ccded0de9a6bc18fb76f27714a`. Public HTTPS and API health passed. The private RPC parameter still matches the running server and mode-0600 runtime file, confirmed without printing values. The post-release backup succeeded. Existing Farfield resources were reused; no infrastructure or Phlox configuration changed. Sanitized operational evidence: `artifacts/aws-release-fb46a893.json`.
+
+Public browser checks passed on this exact build: desktop/iPhone/iPad menus fit, free matchmaking paired two separate sessions, personal menus did not pause online play, and both clients agreed on the full-screen result after forfeit. The future-mode label is disabled. No payment requests, wallet signatures or transactions occurred; retired endpoints return 404 and six served runtime/game assets contain no old payment copy. Reports: `artifacts/free-menu-production.json`, `artifacts/online-free-production.json`, `artifacts/free-release-production.json`. Test sessions were closed afterward. Physical Safari wallet approval remains a separate device check.
