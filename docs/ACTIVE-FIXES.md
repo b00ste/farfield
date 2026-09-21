@@ -137,3 +137,10 @@ See [the specialist report](PLAYTEST-2026-09-21.md) and [source PR #1](https://g
 - [x] Move the camera hint above the ability controls.
 
 Implementation is complete. Candidate browser validation and production rollout are recorded in the next validation entry; physical iOS installation/wallet switching remains a device check.
+
+## Direct mobile wallet choices
+
+- [x] Replace the configured Rainbow entry with Zerion and add MetaMask directly in the themed first wallet screen. Keep Browser Wallet and WalletConnect fallbacks.
+- [x] Verify desktop QR generation and iPhone/iPad standalone mobile link generation for both wallets with real connectors/relay, without approving a wallet connection or signing.
+
+Physical app launch and authorization still require the owner's wallet/device. This adds a direct Zerion route without relying on the external WalletConnect search directory.

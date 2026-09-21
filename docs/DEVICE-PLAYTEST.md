@@ -1,10 +1,10 @@
 # Real-device playtest
 
-Build under test: `f997b7f56218d829`, release `e7aa83e` (21 September 2026). Use the public AWS [game](https://farfield.fun/) on each device; submission layout is available with `?submission=1`. Browser emulation has separate evidence and does not complete this checklist. The owner confirmed the production domain was added to Reown's allowlist.
+Build under test: `f8a6f994086d2a2a`, release `6ac1596` (21 September 2026). Use the public AWS [game](https://farfield.fun/) on each device; submission layout is available with `?submission=1`. Browser emulation has separate evidence and does not complete this checklist. The owner confirmed the production domain was added to Reown's allowlist.
 
 ## MacBook, iPhone and iPad
 
-1. Connect your wallet, switch to it when requested, and return to Safari. Confirm the correct account and Friend collection load; no real deposit is required.
+1. Fully close and reopen Farfield to load the latest menu. Choose Zerion or MetaMask directly, switch to the wallet when requested, and return to Safari or the installed game. Confirm the correct account and Friend collection load; no real deposit is required.
 2. Start Friends & AI, build a Foundry, then a Garden. Check a single tap places each blueprint and the Friend follows completed tiles. On MacBook, try B, shape 2, building 4, R and Escape.
 3. Recruit and assign workers. Swipe the worker drawer vertically; labels and controls should stay within its sides. Pan and pinch the level; gestures must not place buildings accidentally.
 4. Give a Friend order, then redirect it. Confirm the marker and current task match. Tap empty space and check the rejection is explained.
