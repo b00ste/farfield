@@ -1420,12 +1420,13 @@
 
 /* Landscape phones have room for all three clusters along the bottom edge. */
 @media (min-width: 700px) {
-  .immersive-game[data-dock="bottom"] .ability-bar,
-  .immersive-game[data-dock="bottom"] .map-controls {
+  .immersive-game[data-dock] .ability-bar,
+  .immersive-game[data-dock] .map-controls {
     bottom: max(12px, env(safe-area-inset-bottom));
   }
   .immersive-game[data-dock] .ability-bar {
     left: max(12px, env(safe-area-inset-left));
+    transform: none;
   }
   .immersive-game[data-dock] .map-controls {
     right: max(12px, env(safe-area-inset-right));

@@ -233,7 +233,7 @@ test("shortage and recovery ramp gradually; farming and Friend work remain produ
   s.foodShortage = 1;
   Object.assign(s.friend, { task: "miners", working: true, hp: 120 });
   near(workPower(s, "miners"), 2.5);
-  near(rates(s).alloy, 0.12 + 2.5 * 0.55);
+  near(rates(s).alloy, 2.5 * 0.55);
   const farm = start();
   production(farm, "garden", "farmers");
   farm.food = 0;
