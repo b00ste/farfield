@@ -43,6 +43,8 @@ test("buildings use alloy only and Quarters allow recruitment beyond 24", () => 
       cells: [{ x: i, y: 10 }],
     });
   assert.equal(housing(s), 30);
+  // Construction costs no energy; running recruitment still needs electricity.
+  s.energy = 1000;
   s.alloy = s.food = 1000;
   s.attackWaves = false;
   for (let i = 0; i < 30; i++) {
@@ -54,6 +56,15 @@ test("buildings use alloy only and Quarters allow recruitment beyond 24", () => 
     applyCommand(s, { type: "recruit", role: "builders" })!,
     /Quarters/,
   );
+});
+test("staffed turrets stop firing during a power outage and resume when power returns", () => {
+  const { rooms, p, q } = battle();
+  q.state.energy = 0;
+  rooms.advance(0.1, 1000);
+  assert.equal(p.state.friend.hp, 120);
+  q.state.energy = 5;
+  rooms.advance(0.1, 1000);
+  assert.ok(p.state.friend.hp < 120);
 });
 test("Shield and EMP charge once, enforce cooldowns, pause and range, and reject invalid input", () => {
   const { rooms, a, p, turret } = battle();

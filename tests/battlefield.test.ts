@@ -223,6 +223,10 @@ test("an infirmary needs an assigned medic at its post; the Friend cannot power 
   wait(room, 1);
   assert.equal(p.state.friend.hp, 20, "dismantling infirmary does not heal");
   hospital.dismantling = false;
+  p.state.energy = 0;
+  wait(room, 1);
+  assert.equal(p.state.friend.hp, 20, "staffed infirmary cannot heal without power");
+  p.state.energy = 5;
   wait(room, 1);
   assert.ok(
     Math.abs(p.state.friend.hp - 28) < 1e-6,
@@ -234,6 +238,16 @@ test("an infirmary needs an assigned medic at its post; the Friend cannot power 
     Math.abs(p.state.friend.hp - 28) < 1e-6,
     "healing stops when its medic dies",
   );
+});
+test("core healing stops without power and resumes when power returns", () => {
+  const { room, p } = match();
+  p.state.friend.hp = 30;
+  p.state.energy = 0;
+  wait(room, 1);
+  assert.equal(p.state.friend.hp, 30);
+  p.state.energy = 5;
+  wait(room, 1);
+  assert.ok(p.state.friend.hp > 30);
 });
 test("a second medic doubles infirmary healing without stacking hospitals or exceeding maximum HP", () => {
   const { room, p } = match();
@@ -459,7 +473,7 @@ test("refunds preserve the full amount even when production storage is full", ()
   assert.equal(s.energy, 300);
   tick(s, 0.1);
   assert.equal(s.alloy, 314);
-  assert.equal(s.energy, 300);
+  assert.equal(s.energy, 300 - 0.02 * 0.1, "the core still draws its normal upkeep");
 });
 test("fixed corner seats keep opening routes balanced and never overlap", () => {
   for (let n = 2; n <= 4; n++)

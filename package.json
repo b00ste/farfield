@@ -29,6 +29,7 @@
     "test:battlefield": "node tests/shared-battlefield-browser.mjs",
     "test:touch": "node tests/touch-browser.mjs",
     "test:combat": "node tests/combat-browser.mjs",
+    "test:power": "node tests/power-browser.mjs",
     "benchmark": "node --experimental-strip-types scripts/benchmark.ts",
     "test:live": "node tests/live-four-player.mjs",
     "test:submission": "node tests/submission-browser.mjs",

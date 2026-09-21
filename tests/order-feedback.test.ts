@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createState } from "../games/farfield/engine.ts";
+import { createState, MODULES } from "../games/farfield/engine.ts";
 import {
   attackTarget,
   commandPoint,
   friendOrder,
+  workIsUnpowered,
 } from "../games/farfield/order-feedback.ts";
 
 test("attack feedback identifies the target owner even when module IDs collide", () => {
@@ -54,4 +55,34 @@ test("enemy worker feedback does not fall back to its commander or a hidden targ
     point: { x: 2, y: 2 },
     label: "Enemy worker",
   });
+});
+
+test("stationary work reports power off while reactor and manual recovery tasks stay available", () => {
+  const s = createState();
+  s.energy = 0;
+  s.friend.working = true;
+  for (const [task, building] of [
+    ["miners", "foundry"],
+    ["farmers", "garden"],
+    ["scientists", "lab"],
+    ["medics", "infirmary"],
+    ["guards", "turret"],
+  ] as const) {
+    s.modules[0].type = building;
+    s.friend.task = task;
+    assert.equal(workIsUnpowered(s, s.friend), true);
+    assert.equal(friendOrder(s), `Power off · ${MODULES[building].name}`);
+    s.friend.path = [{ x: 0, y: 0 }];
+    assert.equal(friendOrder(s), `Moving · ${MODULES[building].name}`);
+    s.friend.path = [];
+    s.energy = 1;
+    assert.equal(workIsUnpowered(s, s.friend), false);
+    assert.ok(!friendOrder(s).includes("Power off"));
+    s.energy = 0;
+  }
+  for (const task of ["engineers", "build", "repair", "salvage"] as const) {
+    s.friend.task = task;
+    assert.equal(workIsUnpowered(s, s.friend), false);
+    assert.ok(!friendOrder(s).includes("Power off"));
+  }
 });

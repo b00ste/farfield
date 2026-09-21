@@ -6,6 +6,7 @@ import {
 import { ABILITIES, type Ability } from "./combat.ts";
 import { GameSelect } from "./GameSelect.tsx";
 import { useKeyboardHints } from "./useKeyboardHints.ts";
+import { BUILDING_POWER_UPKEEP, powerDemand, powerEfficiency } from "./economy.ts";
 import { matchResult } from "./results.ts";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { GameComponentProps } from "@rarefriends/friendsdk/runtime";
@@ -394,7 +395,10 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
   );
   const state = room?.state || empty,
     halted = paused || !!panel || offline;
-  const foodNet = rates(state).food;
+  const resourceRates = rates(state);
+  const foodNet = resourceRates.food;
+  const energyNet = resourceRates.energy;
+  const powerOff = powerEfficiency(state) === 0;
   const foodShortage = state.foodShortage ?? 0;
   const recruitQueue = state.recruitQueue ?? [];
   useEffect(() => {
@@ -778,6 +782,13 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
           flooring. Units walk clear first; keep a connected path to your core.
         </li>
         <li>
+          <strong>Power:</strong> Every completed building uses electricity.
+          Staff reactors as your station grows. At zero energy, production,
+          recruitment, turrets, healing and research bonuses stop. Reactors,
+          movement, manual construction and core salvage still work.
+          Reassign workers to reactors or dismantle unused buildings to reduce demand.
+        </li>
+        <li>
           <strong>Explore:</strong> Your Friend only walks on completed tiles.
           Connect passages to monolith platforms or discovered enemy flooring.
           Enemy bases are hidden until explored.
@@ -827,13 +838,21 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
             <small>ALLOY</small>
           </button>
           <button
-            title={keyboardHints
-              ? "Energy powers Shield (Q) and EMP (E)"
-              : "Energy powers Shield and EMP"}
-            onClick={() => setPanel("help")}
+            title={`Power balance ${energyNet >= 0 ? "+" : ""}${energyNet.toFixed(2)}/s. Buildings use ${powerDemand(state).toFixed(2)}/s. Zero energy shuts buildings off; reactors keep working.`}
+            aria-label="Electricity balance and workers"
+            data-shortage={powerOff}
+            onClick={() => {
+              setDrawer(drawer === "crew" ? null : "crew");
+              focusLevel();
+            }}
           >
             <span className="energy">ϟ</span>
-            <strong>{Math.floor(state.energy)}</strong>
+            <strong>
+              {Math.floor(state.energy)}
+              <b className="food-flow" data-testid="energy-flow" data-negative={energyNet < 0}>
+                {energyNet >= 0 ? "+" : ""}{energyNet.toFixed(2)}/s
+              </b>
+            </strong>
             <small>ENERGY</small>
           </button>
           <button
@@ -1030,6 +1049,9 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
               : `FRIEND ${Math.ceil(state.friend.hp)}/${state.friend.maxHp}`}
           </span>
           <span>{clock(state.time)}</span>
+          {powerOff && (
+            <span className="danger" data-testid="power-outage">POWER OFF · Staff reactors</span>
+          )}
           {foodShortage > 0 && (
             <span className="danger" data-testid="food-shortage">
               FOOD LOW · {Math.round((1 - foodShortage * 0.5) * 100)}%
@@ -1215,12 +1237,12 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                   <strong>
                     {MODULES[type].name} <kbd>{index + 1}</kbd>
                   </strong>
-                  <small>{MODULES[type].alloy} alloy</small>
+                  <small>{MODULES[type].alloy} alloy · {BUILDING_POWER_UPKEEP[type].toFixed(2)} ϟ/s</small>
                   <small>
                     {
                       {
                         passage: "Connect paths",
-                        solar: "Energy for abilities",
+                        solar: "Power the station",
                         garden: "Grow food",
                         foundry: "Produce alloy",
                         habitat: "Add worker beds",

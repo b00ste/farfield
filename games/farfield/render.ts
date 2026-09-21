@@ -1,12 +1,11 @@
-import { attackTarget, type OrderMarker } from "./order-feedback.ts";
-import { COMBAT } from "./combat.ts";
 import {
-  JOBS,
-  workPower,
-  visualPosition,
-  type Actor,
-  type Facing,
-} from "./actors.ts";
+  attackTarget,
+  workIsUnpowered,
+  type OrderMarker,
+} from "./order-feedback.ts";
+import { powerEfficiency } from "./economy.ts";
+import { COMBAT } from "./combat.ts";
+import { JOBS, visualPosition, type Actor, type Facing } from "./actors.ts";
 import {
   MODULES,
   BOUND,
@@ -209,9 +208,16 @@ export function render(
   const onScreen = (x: number, y: number, margin = size * 2) =>
     x >= -margin && y >= -margin && x <= w + margin && y <= h + margin;
   const activeModules = new Set(
-    s.workers.filter((a) => a.working && !a.fighting).map((a) => a.targetId),
+    s.workers
+      .filter((a) => a.working && !a.fighting && !workIsUnpowered(s, a))
+      .map((a) => a.targetId),
   );
-  if (s.friend.working && !s.friend.fighting && s.friend.task !== "rest")
+  if (
+    s.friend.working &&
+    !s.friend.fighting &&
+    s.friend.task !== "rest" &&
+    !workIsUnpowered(s, s.friend)
+  )
     activeModules.add(s.friend.targetId);
   const visibleModules = [...(s.terrain ?? []), ...s.modules].filter((mod) =>
     mod.cells.some((p) => onScreen(px(p.x), py(p.y), size * 6)),
@@ -221,7 +227,12 @@ export function render(
   ctx.fillStyle = "#050b13";
   for (const mod of visibleModules)
     for (const p of mod.cells)
-      ctx.fillRect(px(p.x) + 3 * c.zoom, py(p.y) + 6 * c.zoom, size - 1, size - 1);
+      ctx.fillRect(
+        px(p.x) + 3 * c.zoom,
+        py(p.y) + 6 * c.zoom,
+        size - 1,
+        size - 1,
+      );
   for (const mod of visibleModules) {
     const hostile =
       s.shared && mod.owner !== s.playerId && mod.owner !== "neutral";
@@ -262,9 +273,11 @@ export function render(
       ctx.fillText(
         disabled
           ? `EMP · ${Math.ceil(mod.disabledUntil! - s.time)}s`
-          : staffed
-            ? "TURRET RANGE"
-            : "TURRET · UNSTAFFED",
+          : !hostile && !powerEfficiency(s)
+            ? "TURRET · POWER OFF"
+            : staffed
+              ? "TURRET RANGE"
+              : "TURRET · UNSTAFFED",
         px(mod.cells[0].x + 0.5),
         py(mod.cells[0].y) - 12,
       );
@@ -359,7 +372,10 @@ export function render(
       }
     }
     const active =
-      mod.progress >= 1 && JOBS[mod.type] && activeModules.has(mod.id);
+      mod.progress >= 1 &&
+      JOBS[mod.type] &&
+      (!s.shared || mod.owner === s.playerId) &&
+      activeModules.has(mod.id);
     if (active || mod.id === inspectedId || pending) {
       ctx.strokeStyle =
         mod.id === inspectedId
@@ -519,7 +535,13 @@ export function render(
     color: string,
     label = false,
   ) {
-    if (!actor.working || reduced) return;
+    if (
+      !actor.working ||
+      actor.fighting ||
+      workIsUnpowered(s, actor) ||
+      reduced
+    )
+      return;
     const phase = s.time * 5;
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;

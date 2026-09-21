@@ -1,4 +1,4 @@
-import { workerEfficiency } from "../games/farfield/economy.ts";
+import { workerEfficiency, powerEfficiency } from "../games/farfield/economy.ts";
 import { ABILITIES, COMBAT } from "../games/farfield/combat.ts";
 import {
   applyCommand,
@@ -759,7 +759,7 @@ export function advanceBattlefield(room: Room, dt: number) {
         if (staff && module.cells.some((t) => distance(t, a) <= 4))
           healing = Math.max(healing, 8 * staff);
       }
-      a.hp = Math.min(a.maxHp, a.hp + healing * dt);
+      a.hp = Math.min(a.maxHp, a.hp + healing * powerEfficiency(s) * dt);
     }
   }
   for (const m of room.monoliths) {

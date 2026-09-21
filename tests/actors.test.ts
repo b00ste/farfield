@@ -50,7 +50,7 @@ test("Friend starts alone, walks to a blueprint and must actually work to constr
   assert.equal(s.friend.task, "miners");
   assert.equal(workPower(s, "miners"), 2);
   assert.ok(s.friend.y >= 1);
-  assert.ok(rates(s).alloy > 1);
+  assert.equal(rates(s).alloy, 0.6);
   assert.ok(s.friendWork.alloy > 0);
 });
 test("Friend can operate every specialist building without hiring workers", () => {
@@ -108,7 +108,7 @@ test("helpers spawn at the core and only produce after walking to their own work
   advance(s, 3);
   assert.equal(workPower(s, "miners"), 1);
   assert.equal(worker.targetId, s.modules[1].id);
-  assert.equal(rates(s).alloy, 0.55);
+  assert.equal(rates(s).alloy, 0.3);
   assert.equal(s.roles.miners, 1);
   assert.equal(s.roles.builders, 0);
   assert.equal(

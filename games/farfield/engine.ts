@@ -3,6 +3,11 @@ import {
   MAX_RECRUIT_QUEUE,
   WORKER_FOOD_UPKEEP,
   FOOD_SHORTAGE_SECONDS,
+  MINER_ALLOY_RATE,
+  ENGINEER_ENERGY_RATE,
+  CORE_SALVAGE_RATE,
+  powerDemand,
+  powerEfficiency,
 } from "./economy.ts";
 export {
   RECRUIT_SECONDS,
@@ -10,6 +15,12 @@ export {
   WORKER_FOOD_UPKEEP,
   FOOD_SHORTAGE_SECONDS,
   workerEfficiency,
+  MINER_ALLOY_RATE,
+  ENGINEER_ENERGY_RATE,
+  CORE_SALVAGE_RATE,
+  BUILDING_POWER_UPKEEP,
+  powerDemand,
+  powerEfficiency,
 } from "./economy.ts";
 import {
   createActor,
@@ -63,7 +74,7 @@ export const MODULES: Record<
     alloy: 0,
     energy: 0,
     description:
-      "Your healing point. Rest nearby to recover after combat. Your Friend salvages alloy here; Friend and builders can repair the core. Two worker beds.",
+      "Heals nearby allies while powered. Your Friend can salvage alloy and repair the core even without power. Two worker beds.",
     glyph: "◈",
   },
   passage: {
@@ -80,7 +91,7 @@ export const MODULES: Record<
     alloy: 12,
     energy: 0,
     description:
-      "Powers your Friend’s Shield and EMP abilities. Your Friend can operate it, or recruit an engineer.",
+      "Powers buildings, Shield and EMP. Each on-site engineer generates 0.45 energy/s; your Friend generates 0.90/s. Keeps working during outages.",
     glyph: "ϟ",
   },
   garden: {
@@ -98,7 +109,7 @@ export const MODULES: Record<
     alloy: 14,
     energy: 0,
     description:
-      "Makes alloy for buildings, worker equipment and repairs. Your Friend can mine here, or recruit a miner.",
+      "Each on-site miner makes 0.30 alloy/s for buildings, workers and repairs; your Friend makes 0.60/s. Requires power.",
     glyph: "⬡",
   },
   habitat: {
@@ -601,7 +612,7 @@ export function recruitmentError(
 function advanceRecruitment(s: State, dt: number) {
   const queue = (s.recruitQueue ??= []);
   const next = queue[0];
-  if (!next) return;
+  if (!next || !powerEfficiency(s)) return;
   next.progress = Math.min(1, next.progress + dt / RECRUIT_SECONDS);
   if (next.progress < 1 - 1e-9 || s.workers.length >= housing(s)) return;
   queue.shift();
@@ -910,10 +921,15 @@ export function applyCommand(
   }
   return "Unknown command.";
 }
+export function energyProduction(s: State) {
+  return workPower(s, "engineers") * ENGINEER_ENERGY_RATE;
+}
 export function rates(s: State) {
   return {
-    alloy: workPower(s, "miners") * 0.55 + workPower(s, "salvage") * 0.35,
-    energy: workPower(s, "engineers") * 0.7,
+    alloy:
+      workPower(s, "miners") * MINER_ALLOY_RATE +
+      workPower(s, "salvage") * CORE_SALVAGE_RATE,
+    energy: energyProduction(s) - powerDemand(s),
     food:
       workPower(s, "farmers") * 0.8 -
       s.workers.filter((w) => w.hp > 0).length * WORKER_FOOD_UPKEEP,
@@ -947,10 +963,14 @@ export function tick(s: State, dt: number, otherActors: Actor[] = []) {
     }
   }
   if (s.friend.working) {
-    if (s.friend.task === "miners" || s.friend.task === "salvage")
+    if (
+      (s.friend.task === "miners" && powerEfficiency(s)) ||
+      s.friend.task === "salvage"
+    )
       s.friendWork.alloy += dt;
     if (s.friend.task === "engineers") s.friendWork.energy += dt;
-    if (s.friend.task === "farmers") s.friendWork.food += dt;
+    if (s.friend.task === "farmers" && powerEfficiency(s))
+      s.friendWork.food += dt;
     if (s.friend.task === "repair" && s.integrity >= 100) {
       resetOrder(
         s.friend,
@@ -967,7 +987,10 @@ export function tick(s: State, dt: number, otherActors: Actor[] = []) {
   }
   const r = rates(s);
   s.alloy = Math.min(Math.max(300, s.alloy), s.alloy + r.alloy * dt);
-  s.energy = Math.min(Math.max(300, s.energy), s.energy + r.energy * dt);
+  s.energy = Math.max(
+    0,
+    Math.min(Math.max(300, s.energy), s.energy + r.energy * dt),
+  );
   s.food = Math.max(0, Math.min(Math.max(300, s.food), s.food + r.food * dt));
   const shortage = s.foodShortage ?? 0;
   s.foodShortage = Math.max(
