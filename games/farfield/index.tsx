@@ -5,6 +5,7 @@ import {
 } from "./order-feedback.ts";
 import { ABILITIES, type Ability } from "./combat.ts";
 import { GameSelect } from "./GameSelect.tsx";
+import { useKeyboardHints } from "./useKeyboardHints.ts";
 import { matchResult } from "./results.ts";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { GameComponentProps } from "@rarefriends/friendsdk/runtime";
@@ -245,6 +246,9 @@ export default function Game(props: GameComponentProps) {
   return <Mission key={props.friendId.toString()} {...props} />;
 }
 function Mission({ friendId, client, paused }: GameComponentProps) {
+  const keyboardHints = useKeyboardHints();
+  const shortcutTitle = (label: string, key: string) =>
+    keyboardHints ? `${label} (${key})` : label;
   const [ready, setReady] = useState(false),
     [loadError, setLoadError] = useState(""),
     [retry, setRetry] = useState(0),
@@ -766,8 +770,10 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
       </p>
       <ul>
         <li>
-          <strong>Build:</strong> B, choose a block, then a building. Click once
-          to place. R rotates; Escape clears placement. Unfinished blueprints
+          <strong>Build:</strong> Open Build, choose a block, then a building.
+          Position the preview and place it. Use Rotate or Cancel while placing.
+          {keyboardHints && " B opens Build; R rotates; Escape clears placement."}{" "}
+          Unfinished blueprints
           refund 100%; dismantling completed buildings returns 75% and removes
           flooring. Units walk clear first; keep a connected path to your core.
         </li>
@@ -778,10 +784,12 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
         </li>
         <li>
           <strong>Fight:</strong> Click a visible enemy or building to attack.
-          Assign guards with W, then choose Follow Friend or Hold here. Staffed
+          Assign guards in Workers{keyboardHints && " (W)"}, then choose Follow
+          Friend or Hold here. Staffed
           Defense buildings protect nearby approaches. Red rings show enemy
-          turret range. Shield (Q): 20 energy, 65% damage reduction for 6s. EMP
-          (E): 15 energy, disables visible turrets within 6 tiles for 6s.
+          turret range. Shield{keyboardHints && " (Q)"}: 20 energy, 65% damage
+          reduction for 6s. EMP{keyboardHints && " (E)"}: 15 energy, disables
+          visible turrets within 6 tiles for 6s.
         </li>
         <li>
           <strong>Recover:</strong> Retreat to your core, or an Infirmary with a
@@ -805,6 +813,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
       data-ended={state.phase === "won" || state.phase === "lost"}
       data-dock={dock}
       data-reduced={reduced}
+      data-keyboard-hints={keyboardHints}
       aria-label="Farfield station command"
     >
       <div className="flight-hud">
@@ -818,7 +827,9 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
             <small>ALLOY</small>
           </button>
           <button
-            title="Energy powers Shield (Q) and EMP (E)"
+            title={keyboardHints
+              ? "Energy powers Shield (Q) and EMP (E)"
+              : "Energy powers Shield and EMP"}
             onClick={() => setPanel("help")}
           >
             <span className="energy">ϟ</span>
@@ -1140,7 +1151,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
               <button
                 onClick={() => setChoosingBuilding(false)}
                 aria-keyshortcuts="Backspace"
-                title="Choose a different block (Backspace)"
+                title={shortcutTitle("Choose a different block", "Backspace")}
               >
                 ← Block
               </button>
@@ -1341,7 +1352,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
           <button
             aria-label="Open build panel"
             aria-keyshortcuts="B"
-            title="Build (B)"
+            title={shortcutTitle("Build", "B")}
             aria-expanded={drawer === "build"}
             aria-pressed={drawer === "build"}
             onClick={() => {
@@ -1358,7 +1369,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
           <button
             aria-label="Manage crew"
             aria-keyshortcuts="W"
-            title="Workers (W)"
+            title={shortcutTitle("Workers", "W")}
             aria-expanded={drawer === "crew"}
             aria-pressed={drawer === "crew"}
             onClick={() => {
@@ -1381,7 +1392,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                   <button
                     onClick={rotate}
                     aria-label="Rotate ↻"
-                    title="Rotate block (R)"
+                    title={shortcutTitle("Rotate block", "R")}
                   >
                     <ActionIcon kind="rotate" />
                   </button>
@@ -1390,7 +1401,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                     disabled={!ghost || !!canBuild || busy || halted}
                     onClick={() => build()}
                     aria-label="Build ↵"
-                    title={canBuild || "Place building (Enter)"}
+                    title={canBuild || shortcutTitle("Place building", "Enter")}
                   >
                     <ActionIcon kind="place" />
                   </button>
@@ -1525,7 +1536,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
               )}
               <button
                 aria-label="Close building details"
-                title="Clear selection (Esc)"
+                title={shortcutTitle("Clear selection", "Esc")}
                 onClick={() => {
                   setSelected(null);
                   setGhost(null);
