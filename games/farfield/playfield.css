@@ -1436,7 +1436,16 @@
   }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 699px) {
+  .immersive-game:not([data-dock="bottom"]) .ability-bar {
+    left: max(8px, env(safe-area-inset-left));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    transform: none;
+  }
+  .immersive-game:not([data-dock="bottom"]) .map-controls {
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
 }
 /* Combat modes are immediate icon actions beside the abilities. */
 .immersive-game .ability-bar {
@@ -1482,9 +1491,6 @@
 @media (max-width: 600px) {
   .immersive-game .ability-bar {
     left: 8px;
-  }
-  .immersive-game:not([data-dock="bottom"]) .map-controls {
-    bottom: 10px;
   }
 }
 @media (pointer: coarse) {
