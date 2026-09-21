@@ -14,7 +14,7 @@ Plan **$35–60/month** for an initial single-region public beta: one 4-GB Light
 
 A later **$150–200/month** planning allowance can cover two 4-GB instances ($48), a load balancer ($18), an encrypted high-availability managed database ($60), small staging capacity, backups and monitoring. These component prices come from [AWS Lightsail pricing](https://aws.amazon.com/lightsail/pricing/); the totals are estimates, not quotes. Region, workload and bandwidth can change costs; domain registration, taxes and overages are excluded.
 
-The redundant setup is a future design: the current game still needs shared match storage, authoritative match ownership, routing and failover tests before two servers can safely serve it. Start with the beta configuration and size from measured concurrent matches. Domain, region and spending approval remain to be supplied before provisioning.
+The redundant setup is a future design: the current game still needs shared match storage, authoritative match ownership, routing and failover tests before two servers can safely serve it. Start with the beta configuration and size from measured concurrent matches. The owner selected `farfield.fun`. AWS region and spending approval remain open before provisioning; domain ownership and DNS access still need verification.
 
 ## Prepare the VM
 
@@ -26,12 +26,12 @@ The redundant setup is a future design: the current game still needs shared matc
 
 ## Build and start
 
-Run these commands from the repository root on the VM. Replace the example hostname first; it must be a hostname without a URL scheme or path.
+Run these commands from the repository root on the VM. The configured public hostname is `farfield.fun`; it must point to the provisioned VM before HTTPS validation.
 
 ```sh
 git clone https://github.com/b00ste/farfield.git
 cd farfield
-export GAME_DOMAIN=play.example.com
+export GAME_DOMAIN=farfield.fun
 docker compose -f deploy/compose.yaml config --quiet
 docker compose -f deploy/compose.yaml build --pull farfield
 docker compose -f deploy/compose.yaml up -d
@@ -45,7 +45,7 @@ The runtime image uses Node 24 as UID 1000, with only the bundled server and bui
 
 The Compose configuration enables `FARFIELD_STATE_PATH=/data/rooms.json`, disables RF wagers, waits for the Node HTTP healthcheck before starting the proxy, and gives the server 30 seconds to finish its shutdown snapshot. The [Compose service reference](https://docs.docker.com/reference/compose-file/services/) documents these startup and stop settings. Both services restart after an unexpected process exit. Docker marking a process unhealthy does not itself restart it; monitor health and logs.
 
-Play at `https://YOUR_HOSTNAME/`; submission mode is `https://YOUR_HOSTNAME/?submission=1`.
+After deployment and DNS verification, play at `https://farfield.fun/`; submission mode is `https://farfield.fun/?submission=1`. These are planned URLs, not live deployment claims.
 
 ## Verify before inviting players
 
