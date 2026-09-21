@@ -517,9 +517,7 @@ export function StationMap({
       <div className="map-coordinates">
         {ghost
           ? `X ${ghost.x.toString().padStart(3, "0")} · Y ${ghost.y.toString().padStart(3, "0")}`
-          : "DRAG TO EXPLORE"}{" "}
-        <span>·</span> <span className="mouse-zoom-hint">SCROLL TO ZOOM</span>
-        <span className="touch-zoom-hint">PINCH TO ZOOM</span>
+          : null}
       </div>
       <div className="compass" aria-hidden="true">
         N<br />↑
