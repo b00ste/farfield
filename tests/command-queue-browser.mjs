@@ -20,12 +20,18 @@ const game = page.frameLocator("iframe");
 let latest,
   token,
   delayed = false,
-  requests = [];
+  requests = [],
+  streamRequests = 0,
+  stateMessages = 0;
 const errors = [],
   observations = [];
 await observeRoom(page, (view) => {
+  stateMessages++;
   if (!latest || view.revision >= latest.revision) latest = view;
   if (view.token) token = view.token;
+});
+page.on("request", (request) => {
+  if (new URL(request.url()).pathname === "/api/events") streamRequests++;
 });
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("response", async (r) => {
@@ -170,6 +176,39 @@ try {
       "reconnect does not replay offline clicks",
     );
     observations.push({ name: "disconnect/reconnect", passed: true });
+    if (process.env.ASSERT_PAGE_RESTORE === "1") {
+      const before = streamRequests,
+        messagesBefore = stateMessages,
+        seat = latest.selfId;
+      const frame = await (
+        await page.locator("iframe").elementHandle()
+      ).contentFrame();
+      await frame.evaluate(() =>
+        window.dispatchEvent(
+          new PageTransitionEvent("pageshow", { persisted: true }),
+        ),
+      );
+      await wait(
+        () => streamRequests > before && stateMessages > messagesBefore,
+        "restored page reconnects and receives live state",
+      );
+      await page.waitForTimeout(800);
+      assert.equal(
+        streamRequests,
+        before + 1,
+        "persisted pageshow opens one replacement stream",
+      );
+      assert.equal(
+        latest.selfId,
+        seat,
+        "persisted pageshow keeps same player seat",
+      );
+      observations.push({
+        name: "synthetic persisted pageshow",
+        replacementStreams: streamRequests - before,
+        sameSeat: true,
+      });
+    }
     await page.screenshot({ path: "artifacts/command-feedback.png" });
   }
   await writeFile(

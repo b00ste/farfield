@@ -1,6 +1,6 @@
 # Real-device playtest
 
-Build under test: `674b6057977e9910` (21 September 2026). Use the normal [preview](https://4173--main--ai-dev-01--daniel.kethalia.com/) on each device; submission layout is available with `?submission=1`. Browser emulation has separate evidence and does not complete this checklist.
+Build under test: `1d484581aadf0869` (21 September 2026). Use the normal [preview](https://4173--main--ai-dev-01--daniel.kethalia.com/) on each device; submission layout is available with `?submission=1`. Browser emulation has separate evidence and does not complete this checklist.
 
 ## MacBook, iPhone and iPad
 

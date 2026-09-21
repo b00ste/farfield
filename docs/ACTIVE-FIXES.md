@@ -103,7 +103,7 @@ This section supersedes earlier implementation notes: voluntary dismantling remo
 
 - [x] Touch-confirmed automatic evacuation before dismantling; separate authenticated request budgets; live practice matchmaking and full-viewport results.
 
-- [ ] Hosting for larger public concurrency: direct 16-seat transport test passes; development proxy rate-limits the public 16-seat test.
+- [ ] Measure larger public concurrency on the chosen cloud host; four-browser streaming is verified, higher sustained capacity is not.
 
 - [x] Live expired-seat test returns to the title menu and clears saved recovery data; fixed the banner button inheriting blocked pointer input.
 
@@ -116,9 +116,11 @@ This section supersedes earlier implementation notes: voluntary dismantling remo
 - [x] Keep online simulation and disconnect expiry running when every tab is hidden. Resolve simultaneous expiry as a terminal draw.
 - [x] Separate leaving a room from hiding a tab: preserve backgrounded opponents’ matches/results, invalidate departed capabilities and migrate host control.
 - [x] Fit worker labels and controls on narrow screens; prevent vertical swipes from scrolling the worker drawer sideways.
-- [ ] Finish combined-build browser regression and fresh live four-session stress test.
+- [x] Combined browser regression and seven-minute public streaming stress passed: 230 buildings / 256 workers / 486 commands, zero game/page/HTTP errors.
 - [ ] Real Safari/device check on the owner’s MacBook, iPhone and iPad.
 - [x] Prepare single-server Docker/Caddy deployment for AWS or GCP, private snapshots and a hosted CI container recovery check. Real process restart/crash recovery passes; cloud provisioning is pending domain, region and budget.
 - [x] Replace four-times-per-second sync polling with an authenticated event stream. The latest long browser test exposed 512 requests/minute proxy limits even at four seats; earlier “no API errors” reports did not fully account for sync errors and are superseded by the fresh transport verification below.
-- [ ] Complete fresh four-session streaming stress run, including every HTTP error in its result.
+- [x] Four streaming connections delivered 7,069 updates with zero sync polling. Complete HTTP error accounting is now required by the harness.
 - [x] Hosted CI passed the production container build, nonroot runtime, private snapshot permissions and exact match recovery after restart. Four real HTTP streams also sustained 65 seconds with no polling.
+
+See [the specialist report](PLAYTEST-2026-09-21.md) and [source PR #1](https://github.com/b00ste/farfield/pull/1). Physical Safari/wallet handoff and dense desktop building-label polish remain open.

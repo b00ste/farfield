@@ -1,5 +1,8 @@
 # Live playtest — 21 September 2026
 
+> Latest results: [21 September specialist playtest](PLAYTEST-2026-09-21.md) supersedes the older polling/error totals and in-memory-only restart limitations below.
+
+
 Status: four-session gameplay validation complete; suitable for a small free early-access playtest. Larger public concurrency is limited by the development proxy. These are observed results, not a production certification.
 
 ## Four-session economy stress run

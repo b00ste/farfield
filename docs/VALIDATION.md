@@ -1,5 +1,8 @@
 # Validation — September 20, 2026
 
+> Latest results: [21 September specialist playtest](PLAYTEST-2026-09-21.md) supersedes the older polling/error totals and in-memory-only restart limitations below.
+
+
 **Current implementation:** full-screen playfield, four-commander mixed custom matches, practice matchmaking, shared contested monoliths and separately gated 1 RF escrow. See the latest section at the end; earlier sections record superseded UI/gameplay history.
 
 Primary source: `/home/coder/rare-friends-vibeathon` in `daniel/ai-dev-01`. Browser checks: `daniel/rarefriends-browser` (Browser Testing profile), using its installed Google Chrome through Playwright.

@@ -466,6 +466,7 @@ try {
   }
   // Test a refresh without resetting the room: report recovery, do not conceal a new seat.
   const prior = clients[3].latest.selfId;
+  const streamsBeforeRefresh = report.transport.streamRequests;
   clients[3].latest = null;
   await clients[3].page.reload();
   await pause(3000);
@@ -487,6 +488,12 @@ try {
     "game returns after reload",
     30000,
   );
+  await clients[3].game.locator(".sector-status").waitFor();
+  if (process.env.EXPECT_STREAM === "1")
+    await wait(
+      () => report.transport.streamRequests > streamsBeforeRefresh,
+      "fresh game reconnects live stream after reload",
+    );
   await wait(
     () => clients[3].latest?.selfId === prior,
     "same seat after reload",
