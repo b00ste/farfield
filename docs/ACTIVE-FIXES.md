@@ -165,3 +165,5 @@ Validation: 104 automated tests, typecheck, FriendSDK check and production build
 - [x] Approved economy pass: 0.13 food/s per living worker, serial six-second recruitment (five queued), reserved beds/jobs and refundable cancellations. Empty food gradually reduces worker/defense efficiency to 50%; farming and the Friend remain available for recovery. Queue persistence, AI priorities, timed shortage recovery and real tablet touch feedback verified.
 
 Released on `farfield.fun` as build `c3fad9100bb38e60` from `92b0818`; source PR #2 merged. Final CI passed 120 tests and production browser checks passed tablet economy/recovery and touch placement. The existing match and human seat survived deployment.
+
+- [x] Removed persistent drag/scroll/pinch instructions from the level; placement coordinates remain available. Released as build `f453b9e36be91061` from `5b58d76` (PR #3).
