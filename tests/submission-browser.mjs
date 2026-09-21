@@ -24,6 +24,7 @@ await observeRoom(page, (view) => {
   if (view.token) token = view.token;
 });
 const errors = [];
+const interactionEvidence = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("response", async (r) => {
   if (/\/api\/(sync|create|command)$/.test(r.url()) && r.ok()) {
@@ -44,9 +45,31 @@ const wait = async (fn, why) => {
 const game = page.frameLocator("iframe");
 async function clickGame(button) {
   await button.waitFor();
-  const b = await button.evaluate((e) => {
-    const b = e.getBoundingClientRect();
-    return { x: b.x, y: b.y, width: b.width, height: b.height };
+  // Coordinate clicks bypass Playwright's enabled/stable actionability checks.
+  // Wait for real command acknowledgements and drawer animation before aiming.
+  let b, previous;
+  let sawDisabled = false;
+  const label =
+    (await button.getAttribute("aria-label")) || (await button.innerText());
+  await wait(async () => {
+    if (!(await button.isEnabled())) {
+      sawDisabled = true;
+      return false;
+    }
+    b = await button.evaluate((e) => {
+      const b = e.getBoundingClientRect();
+      return { x: b.x, y: b.y, width: b.width, height: b.height };
+    });
+    const stable =
+      previous &&
+      Object.keys(b).every((key) => Math.abs(b[key] - previous[key]) < 0.25);
+    previous = b;
+    return stable;
+  }, "scaled control is enabled and stable");
+  interactionEvidence.push({
+    label,
+    waitedForPendingCommand: sawDisabled,
+    enabledAtClick: await button.isEnabled(),
   });
   const f = await page.locator("iframe").boundingBox();
   await page.mouse.click(
@@ -133,6 +156,7 @@ try {
   const result = page.waitForResponse(
     (r) =>
       r.url().endsWith("/api/command") &&
+      r.request().method() === "POST" &&
       r.request().postDataJSON().command.type === "demolish",
   );
   await clickGame(game.getByRole("button", { name: /Dismantle/ }));
@@ -186,6 +210,14 @@ try {
   );
   token = null;
   assert.deepEqual(errors, []);
+  await writeFile(
+    "artifacts/submission-browser.json",
+    JSON.stringify(
+      { frontend: origin, api: apiOrigin, interactionEvidence, errors },
+      null,
+      2,
+    ),
+  );
   console.log(
     "PASS: 960x640 submission viewport at two sizes, scaled click placement, real floor removal, reload seat recovery, expired-seat exit",
   );

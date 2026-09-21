@@ -2,7 +2,7 @@
 
 **A little further. Your frontier.** A browser space-strategy game built with FriendSDK, RainbowKit, React, Canvas 2D and an authoritative Node server. Your Rare Friend is the main character: gather resources, construct tetromino rooms, recruit helpers, fight rival stations and capture four shared monoliths.
 
-[Play the preview](https://4173--main--ai-dev-01--daniel.kethalia.com/). Available while the development workspace and server are running. For the 960×640 submission viewport, use [submission mode](https://4173--main--ai-dev-01--daniel.kethalia.com/?submission=1); the normal URL keeps the responsive full-window layout.
+[Play Farfield](https://farfield.fun/). For the 960×640 submission viewport, use [submission mode](https://farfield.fun/?submission=1); the normal URL keeps the responsive full-window layout. The public beta runs on dedicated AWS resources; see the [deployment record](docs/AWS-DEPLOYMENT.md) for operations and limitations.
 
 ## Play
 

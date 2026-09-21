@@ -23,6 +23,8 @@ The supplied Docker image and single-host Compose restart/recovery setup passed 
 
 ## AWS plan for farfield.fun
 
+The dedicated AWS deployment and its operational details are recorded in [AWS-DEPLOYMENT.md](AWS-DEPLOYMENT.md). The guidance below also applies to preparing a new installation.
+
 Use **US East (N. Virginia), `us-east-1`**, as an initial single-region choice for the expected North American and European audience. This is a starting assumption, not a latency measurement. Measure both audiences after launch; moving the single server changes latency for all matches. Do not run independent copies in NA and EU until players and rooms can be assigned to an authoritative region.
 
 Provision Farfield separately from Phlox:

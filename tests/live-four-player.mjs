@@ -30,7 +30,12 @@ const clients = [],
     commands: [],
     samples: [],
     timings: [],
-    transport: { streamRequests: 0, syncRequests: 0, stateMessages: 0 },
+    transport: {
+      streamRequests: 0,
+      syncRequests: 0,
+      stateMessages: 0,
+      streamOrigins: [],
+    },
   };
 await mkdir("artifacts", { recursive: true });
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -88,8 +93,13 @@ async function connect(i) {
     if (view.token) c.token = view.token;
   });
   page.on("request", (request) => {
-    const path = new URL(request.url()).pathname;
-    if (path === "/api/events") report.transport.streamRequests++;
+    const url = new URL(request.url()),
+      path = url.pathname;
+    if (path === "/api/events") {
+      report.transport.streamRequests++;
+      if (!report.transport.streamOrigins.includes(url.origin))
+        report.transport.streamOrigins.push(url.origin);
+    }
     if (path === "/api/sync") report.transport.syncRequests++;
   });
   page.on("pageerror", (e) =>
@@ -515,6 +525,11 @@ try {
   assert.equal(report.errors.length, 0, "live gameplay and page errors");
   assert.equal(report.httpErrors.length, 0, "live transport HTTP errors");
   if (process.env.EXPECT_STREAM === "1") {
+    assert.deepEqual(
+      report.transport.streamOrigins,
+      [apiOrigin],
+      "browser streams use the configured API origin",
+    );
     assert.ok(
       report.transport.streamRequests >= 4,
       "all four clients request live streams",
