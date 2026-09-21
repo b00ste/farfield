@@ -15,16 +15,16 @@ The first Terraform apply created **19 resources, changed zero existing resource
 | Storage | 40 GiB encrypted gp3; retained on instance termination |
 | Backup bucket | `farfield-production-backups-427297225374`, private, versioned, encrypted |
 | Initial infrastructure plan commit | `2922abd8e9b4512b84be9f3c8bc33a646ce0b6b3` |
-| Application release | `f6ffe31fa92d2e1667574d86918c090a50561d0c` |
-| Browser build | `cef6275969e26014` |
-| Runtime image | `sha256:f15e0f5ba2fd61011baab172402bb772a2602cf784d4d1cab7309a57d349f97b` |
+| Initial application release | `f6ffe31fa92d2e1667574d86918c090a50561d0c` |
+| Initial browser build | `cef6275969e26014` |
+| Initial runtime image | `sha256:f15e0f5ba2fd61011baab172402bb772a2602cf784d4d1cab7309a57d349f97b` |
 | Node runtime | `v24.21.0` |
 
 Cloudflare owns both DNS records, currently **DNS only** with 300-second TTL. Caddy terminates HTTPS on the instance. Cloudflare CDN/proxy protection is not enabled. Only ports 80/TCP, 443/TCP and 443/UDP are public; administration uses SSM. The game container runs as UID 1000, uses a private persistent volume and cannot obtain instance credentials through IMDSv2.
 
 The owner confirmed that `https://farfield.fun` was added to the Reown/WalletConnect project's domain allowlist. This configuration confirmation does not replace a physical-device wallet connection test.
 
-The runtime role has SSM registration/channel permissions and can write only the Farfield `backups/*` prefix. It has no Parameter Store access and cannot read/delete backups. Bootstrap used an existing operator credential without changing its policies; Farfield does not reuse the Phlox runtime role or network.
+The runtime role has SSM registration/channel permissions and can write only the Farfield `backups/*` prefix. Its only Parameter Store read is the exact private RPC parameter described below; it cannot read/delete backups. Bootstrap used an existing operator credential without changing its policies; Farfield does not reuse the Phlox runtime role or network.
 
 ## Bootstrap correction
 
@@ -55,3 +55,15 @@ The submission test's coordinate-click helper initially clicked a temporarily di
 A final instrumented run confirmed the control became enabled after the inspection command completed and one scaled mouse click removed the building. A separate 20-second four-client check confirmed all five event-stream requests, including reload, used `https://api.farfield.fun`; it delivered 738 updates without errors. Sanitized JSON evidence is retained under the primary checkout's ignored `artifacts/` directory.
 
 Real MacBook/iPhone/iPad wallet switching remains a separate [device check](DEVICE-PLAYTEST.md). Physical-device performance, larger concurrency, alert delivery and a disaster restore drill are not established by these tests.
+
+## Private RPC configuration
+
+The private Friend RPC endpoint is stored as an AWS SSM `SecureString` at `/farfield/production/friend-rpc-url`. The value is absent from Git, Terraform state, build arguments and browser assets. A targeted Terraform plan added one Farfield inline policy allowing only `ssm:GetParameter` for this exact parameter; no existing resource was changed or deleted. Terraform's non-secret `friend_rpc_parameter` setting is retained for subsequent plans.
+
+The release process reads the parameter on the VM after building the public image and writes `/opt/farfield/runtime.env` with mode `0600`. Docker Compose passes it only to the running game server. The parameter path is remembered across releases. Provider transport/JSON errors and JSON-RPC diagnostics are replaced with safe errors; successful replies contain only expected RPC data. The browser continues using `https://api.farfield.fun/api/friend-rpc`. Read-only method/contract restrictions and request/concurrency limits remain enabled.
+
+The new provider passed private preflight checks for the expected chain, NFT ownership and both owner-filtered transfer histories from block zero to the current head. Provider plan quotas still apply. See the [private RPC runbook](../deploy/aws/README.md) for rotation and deployment.
+
+Current RPC release: `f791fab56a9d8f701d4448eef7680d80849d8326`, browser build `4eceda9bc4e71fb2`, runtime image `sha256:10bff4114e9d23fb75a61408837126c033452e1d87738b02347cfee86b433ca3`. Inside-VM checks confirmed that both the running container setting and the mode-0600 runtime file match the SecureString, without printing any values. The post-deployment backup succeeded. [CI passed](https://github.com/b00ste/farfield/actions/runs/35601278436), including five RPC tests covering successful ownership/history reads, metadata stripping, provider/network/JSON failures and credential-bearing error text.
+
+The unmocked production browser test found **42 eligible Friends and one hidden Friend** through the actual FriendSDK ownership flow. Both filtered histories spanned block zero to head; ownership, generation and canonical 64-word artwork frames succeeded. Six served HTML/JS/CSS resources and RPC responses contained no private-provider markers; there were no direct Alchemy browser requests. Five conventional source-map routes and both `/.env` and `/runtime.env` on each domain returned 404. A nonexistent-token error was sanitized. The reproducible test is `tests/production-rpc-browser.mjs`; sanitized local evidence is `artifacts/production-rpc.json`.
