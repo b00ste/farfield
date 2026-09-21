@@ -23,17 +23,19 @@ if [[ ! -d "$release/.git" ]]; then
 fi
 [[ "$(git -C "$release" rev-parse HEAD)" == "$commit" ]] || exit 1
 umask 077
-cat > "$root/production.env" <<EOF
+candidate_env="$root/release-$commit.env"
+cat > "$candidate_env" <<EOF
 GAME_DOMAIN=$game_domain
 API_DOMAIN=$api_domain
 PUBLIC_API_ORIGIN=https://$api_domain
 FARFIELD_ALLOWED_ORIGINS=https://$game_domain
 FARFIELD_IMAGE_TAG=$commit
 EOF
-compose=(docker compose --project-name farfield --env-file "$root/production.env" -f "$release/deploy/compose.yaml" -f "$release/deploy/compose.split.yaml")
+compose=(docker compose --project-name farfield --env-file "$candidate_env" -f "$release/deploy/compose.yaml" -f "$release/deploy/compose.split.yaml")
 "${compose[@]}" config --quiet
 "${compose[@]}" build --pull
 # Only replace the current release link after the immutable build succeeds.
+install -m 0600 "$candidate_env" "$root/production.env"
 ln -sfn "$release" "$root/current"
 cat > /etc/systemd/system/farfield.service <<'EOF'
 [Unit]
