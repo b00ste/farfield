@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import { formatUnits, type Address, type Hex } from "viem";
 import { RF, ENTRY, chain, escrowAbi, tokenAbi } from "../shared/wagers";
+import { apiUrl } from "./api";
 export async function wagerApi<T>(
   action: string,
   body: unknown = {},
 ): Promise<T> {
-  const response = await fetch(`./api/wager/${action}`, {
+  const response = await fetch(apiUrl(`/api/wager/${action}`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

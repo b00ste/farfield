@@ -1,0 +1,7 @@
+region        = "us-east-1"
+name          = "farfield-production"
+instance_type = "t3a.medium"
+game_domain   = "farfield.fun"
+api_domain    = "api.farfield.fun"
+# Replace with the full reviewed public Git commit to deploy.
+source_commit = "0000000000000000000000000000000000000000"

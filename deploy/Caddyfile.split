@@ -1,0 +1,18 @@
+{$GAME_DOMAIN} {
+	encode zstd gzip
+	@api path /api/* /health
+	respond @api "Use the API hostname." 404
+	reverse_proxy farfield:4173
+}
+
+{$API_DOMAIN} {
+	@api path /api/* /health
+	handle @api {
+		reverse_proxy farfield:4173 {
+			flush_interval -1
+		}
+	}
+	handle {
+		respond "Not found" 404
+	}
+}

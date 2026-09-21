@@ -4,6 +4,17 @@ import { readFile, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 const version = randomBytes(8).toString("hex");
 const output = "games/farfield/.friendsdk";
+const apiOrigin = process.env.PUBLIC_API_ORIGIN || "";
+if (apiOrigin) {
+  const url = new URL(apiOrigin);
+  if (
+    !["https:", "http:"].includes(url.protocol) ||
+    url.origin !== apiOrigin.replace(/\/$/, "")
+  )
+    throw new Error(
+      "PUBLIC_API_ORIGIN must be an http(s) origin without credentials, path, query or fragment.",
+    );
+}
 await buildGame("games/farfield");
 await build({
   entryPoints: ["host/index.tsx"],
@@ -19,6 +30,7 @@ await build({
   minify: true,
   define: {
     __FARFIELD_BUILD__: JSON.stringify(version),
+    __FARFIELD_API_ORIGIN__: JSON.stringify(apiOrigin.replace(/\/$/, "")),
     "process.env.NODE_ENV": '"production"',
     __WALLETCONNECT_PROJECT_ID__: JSON.stringify(
       process.env.WALLETCONNECT_PROJECT_ID ??

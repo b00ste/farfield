@@ -6,6 +6,9 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      args:
+        PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:-}
+        WALLETCONNECT_PROJECT_ID: ${WALLETCONNECT_PROJECT_ID-1ef81bdbd6e8e9a585c2e94944ee1f6d}
     init: true
     restart: unless-stopped
     stop_grace_period: 30s
@@ -14,6 +17,7 @@ services:
       PORT: "4173"
       FARFIELD_STATE_PATH: /data/rooms.json
       RF_WAGERS_ENABLED: "false"
+      FARFIELD_ALLOWED_ORIGINS: ${FARFIELD_ALLOWED_ORIGINS:-}
     volumes:
       - rooms:/data
     expose:

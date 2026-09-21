@@ -40,6 +40,11 @@ jobs:
           GAME_DOMAIN: ci.example.invalid
       - name: Build the production image
         run: docker build --pull --tag farfield:ci .
+      - name: Validate split-domain Compose and HTTPS configuration
+        run: |
+          docker compose --env-file deploy/production.env.example -f deploy/compose.yaml -f deploy/compose.split.yaml config --quiet
+          docker run --rm -e GAME_DOMAIN=ci.example.invalid -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          docker run --rm -e GAME_DOMAIN=ci.example.invalid -e API_DOMAIN=api.ci.example.invalid -v "$PWD/deploy/Caddyfile.split:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Verify nonroot runtime and durable match recovery
         run: node tests/container-smoke.mjs
         env:

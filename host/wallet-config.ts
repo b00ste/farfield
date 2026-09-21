@@ -6,6 +6,7 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import { createConfig, http } from "wagmi";
 import { defineChain } from "viem";
+import { apiUrl } from "./api";
 
 // Public application identifier, not a secret or wallet credential. Override at build time.
 export const walletConnectProjectId = __WALLETCONNECT_PROJECT_ID__;
@@ -37,7 +38,7 @@ export const walletConfig = createConfig({
   connectors,
   multiInjectedProviderDiscovery: true,
   transports: {
-    [robinhood.id]: http(new URL("./api/friend-rpc", location.href).href, {
+    [robinhood.id]: http(apiUrl("/api/friend-rpc"), {
       batch: false,
       retryCount: 1,
       timeout: 12000,

@@ -1,5 +1,6 @@
 import { RoomStore } from "./room-store.ts";
 import { RoomStreams } from "./events.ts";
+import { allowedOrigins, corsOrigin } from "./cors.ts";
 import { RequestLimits } from "./rate-limit.ts";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -10,6 +11,7 @@ import { forwardFriendRpc } from "./friend-rpc.ts";
 import type { Command } from "../games/farfield/engine.ts";
 const rooms = new Rooms(),
   root = resolve(process.env.GAME_ROOT || "games/farfield/.friendsdk");
+const origins = allowedOrigins(process.env.FARFIELD_ALLOWED_ORIGINS);
 const store = process.env.FARFIELD_STATE_PATH
   ? new RoomStore(resolve(process.env.FARFIELD_STATE_PATH), { webRoot: root })
   : null;
@@ -68,7 +70,15 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url || "/", "http://localhost");
   if (url.pathname.startsWith("/api/")) {
     // The SDK iframe has an opaque origin. Bearer capabilities, never cookies, authorize room actions.
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    const origin = corsOrigin(req.headers.origin, origins);
+    res.setHeader("Vary", "Origin");
+    if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+    if (req.headers.origin && !origin) {
+      res
+        .writeHead(403)
+        .end(JSON.stringify({ error: "Origin is not allowed." }));
+      return;
+    }
     res.setHeader(
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization",

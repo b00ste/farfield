@@ -9,6 +9,7 @@ import { writeFile, mkdir } from "node:fs/promises";
 import assert from "node:assert/strict";
 const origin =
   process.env.TEST_URL || "https://4173--main--ai-dev-01--daniel.kethalia.com";
+const apiOrigin = new URL(process.env.TEST_API_URL || origin).origin;
 const duration = Number(process.env.PLAY_SECONDS || 420);
 const browser = await chromium.launch({
   channel: "chrome",
@@ -21,6 +22,8 @@ const browser = await chromium.launch({
 });
 const clients = [],
   report = {
+    frontend: origin,
+    api: apiOrigin,
     started: new Date().toISOString(),
     errors: [],
     httpErrors: [],
@@ -41,7 +44,7 @@ async function wait(fn, label, ms = 30000) {
 }
 async function command(c, cmd) {
   const t = performance.now();
-  const r = await c.page.request.post(origin + "/api/command", {
+  const r = await c.page.request.post(apiOrigin + "/api/command", {
     headers: { Authorization: "Bearer " + c.token },
     data: { code: c.code, command: cmd },
   });
@@ -93,7 +96,7 @@ async function connect(i) {
     report.errors.push({ client: i, pageError: e.message }),
   );
   page.on("response", async (r) => {
-    if (!r.url().startsWith(origin + "/api/")) return;
+    if (!r.url().startsWith(apiOrigin + "/api/")) return;
     if (r.status() >= 400)
       report.httpErrors.push({
         client: i,
@@ -546,7 +549,7 @@ try {
   for (const c of clients)
     if (c.token)
       await c.page.request
-        .post(origin + "/api/leave", {
+        .post(apiOrigin + "/api/leave", {
           headers: { Authorization: "Bearer " + c.token },
           data: { code: c.code },
         })

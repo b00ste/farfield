@@ -1,4 +1,5 @@
 import { readSeat } from "./session";
+import { apiUrl } from "./api";
 import { GameSelect } from "../games/farfield/GameSelect";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { EscrowPanel, wagerApi, type WagerConfig } from "./escrow-panel";
@@ -36,7 +37,7 @@ const queryClient = new QueryClient();
 // Discovery verifies every held NFT. Batch those reads to avoid a burst of
 // individual HTTP requests against the public RPC for larger collections.
 export const publicClient = createFriendPublicClient({
-  rpcUrl: new URL("./api/friend-rpc", location.href).href,
+  rpcUrl: apiUrl("/api/friend-rpc"),
   batch: true,
 });
 export const spriteReader = createGenerationSpriteReader(publicClient);

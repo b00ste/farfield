@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 const origin =
   process.env.TEST_URL || "https://4173--main--ai-dev-01--daniel.kethalia.com";
+const apiOrigin = new URL(process.env.TEST_API_URL || origin).origin;
 const browser = await chromium.launch({
   channel: "chrome",
   headless: true,
@@ -147,7 +148,7 @@ try {
   for (const c of clients)
     if (c.token)
       await c.page.request
-        .post(origin + "/api/leave", {
+        .post(apiOrigin + "/api/leave", {
           headers: { Authorization: "Bearer " + c.token },
           data: { code: c.latest.code },
         })

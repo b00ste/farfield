@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 const origin =
   process.env.TEST_URL || "https://4173--main--ai-dev-01--daniel.kethalia.com";
+const apiOrigin = new URL(process.env.TEST_API_URL || origin).origin;
 const browser = await chromium.launch({
   channel: "chrome",
   headless: true,
@@ -116,7 +117,7 @@ try {
     "construction completes",
   );
   // Move back onto core, then inspect the completed edge while the Friend is far enough to dismantle safely.
-  await page.request.post(origin + "/api/command", {
+  await page.request.post(apiOrigin + "/api/command", {
     headers: { Authorization: "Bearer " + token },
     data: { code, command: { type: "direct", ...spawn, task: "move" } },
   });
@@ -170,7 +171,7 @@ try {
     [960, 640],
   );
   // Revoke this real seat server-side, then verify recovery from the resulting expiry.
-  await page.request.post(origin + "/api/leave", {
+  await page.request.post(apiOrigin + "/api/leave", {
     headers: { Authorization: "Bearer " + token },
     data: { code },
   });
@@ -198,7 +199,7 @@ try {
   throw e;
 } finally {
   if (token)
-    await page.request.post(origin + "/api/leave", {
+    await page.request.post(apiOrigin + "/api/leave", {
       headers: { Authorization: "Bearer " + token },
       data: { code: latest.code },
     });

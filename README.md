@@ -66,6 +66,12 @@ A living Friend within 2.5 tiles captures a monolith in **10 seconds**, reducibl
 
 AI uses the same costs, physical construction, paths, capture and combat rules. Easy/Normal/Hard decision intervals are 6/3/1.5 seconds. Bots build an economy, recruit guards, approach shared objectives, fight visible enemies, retreat when low on health, and use the same energy/cooldown-gated abilities. AI balance remains an early-access playtest item.
 
+## Host your own game
+
+Use the [self-hosting guide](docs/SELF-HOSTING.md) for local setup or a public Docker/Caddy deployment, including one-domain and separate game/API-domain configurations, HTTPS, backups, recovery and upgrades. The [hosting comparison](docs/CLOUD-HOSTING.md) covers AWS Lightsail/EC2, GCP Compute Engine, other VPS providers, managed containers and a static frontend with a separate backend.
+
+Farfield's production layout uses **farfield.fun** for the game and **api.farfield.fun** for the API. Both can run on one dedicated machine. Self-hosters can instead use a single domain. Run **one authoritative game-server process**; multiple replicas and automatic failover require match ownership/routing work. RF deposits remain disabled in the supplied configuration.
+
 ## Run and check
 
 Requires Node 22.18+ (Node 24 recommended) and npm. Solidity checks additionally require Foundry.
@@ -98,9 +104,9 @@ The current browser suites are `tests/submission-browser.mjs`, `tests/touch-brow
 
 FriendSDK v0.1.2 is packaged in `vendor/rarefriends-friendsdk-0.1.2.tgz` from upstream commit `762d6f58a73ace723f7f82dc1a61bfa036c21edc`. No SDK source modifications. Canonical idle/walk sprites are decoded through its sprite reader, including Colossus’s supported side-facing clips. The iframe retains `sandbox="allow-scripts"` and the SDK CSP.
 
-The trusted host owns RainbowKit and wallet requests. The sandbox uses a bounded private MessageChannel for same-host game commands, selected-Friend art, launch preferences and opening trusted wallet/escrow UI. It never receives a provider, signer or referee key. Only the exact current SDK iframe can use that relay. The room server ticks every 100ms; the trusted host receives authenticated server-sent events about every 250ms and relays monotonic revisions over a private port. The client interpolates character motion between snapshots; commands remain ordinary authenticated requests. Presence requests occur on menu/visibility changes, with heartbeat detection and bounded reconnect backoff. Canvas draws on animation frames.
+The trusted host owns RainbowKit and wallet requests. The sandbox uses a bounded private MessageChannel for game commands, selected-Friend art, launch preferences and opening trusted wallet/escrow UI. It never receives a provider, signer or referee key. Only the exact current SDK iframe can use that relay. The room server ticks every 100ms; the trusted host receives authenticated server-sent events about every 250ms and relays monotonic revisions over a private port. The client interpolates character motion between snapshots; commands remain ordinary authenticated requests. Presence requests occur on menu/visibility changes, with heartbeat detection and bounded reconnect backoff. Canvas draws on animation frames.
 
-Same-origin `/api/friend-rpc` avoids duplicate CORS headers observed from the public Robinhood RPC. It permits only required ownership/artwork reads, owner-filtered Transfer history, chain/block reads and native balance queries. No transaction submission, signing, arbitrary contract calls or collection-wide scans. Optional server-only `FRIEND_RPC_URL` selects an upstream provider.
+The backend `/api/friend-rpc` read proxy avoids duplicate CORS headers observed from the public Robinhood RPC. It permits only required ownership/artwork reads, owner-filtered Transfer history, chain/block reads and native balance queries. No transaction submission, signing, arbitrary contract calls or collection-wide scans. Optional server-only `FRIEND_RPC_URL` selects an upstream provider. The trusted host uses same-origin API requests by default; set build-time `PUBLIC_API_ORIGIN` and server-side `FARFIELD_ALLOWED_ORIGINS` for a separate API hostname.
 
 RainbowKit matches the game’s navy/sage theme. The public WalletConnect project ID is configured; override with `WALLETCONNECT_PROJECT_ID=your-id npm run build`. An explicitly empty value builds installed-wallet-only connections. Library compatibility pins for `cuer`/`qr`, `ws` and the `wagmi/chains` build alias are retained.
 
@@ -108,7 +114,7 @@ Rooms run in one authoritative process and expire after two inactive hours. Set 
 
 Practice API identities are displayed Friend IDs protected by unguessable room capabilities, without separate cryptographic wallet attestation. **Paid matchmaking separately requires a single-use signed challenge and fresh on-chain ownership**, never a practice identity. EOA signatures are supported; contract-wallet signature verification is not yet implemented. The escrow trusts the immutable referee’s winner report. Tests are not an independent contract audit. Mainnet deployment, funding and actual-wallet wager testing have not occurred.
 
-This needs a Node backend; static GitHub Pages alone cannot host it. Shared-host rate limits, bounded rooms and request sizes are included. The private snapshot store supports one process; there is no multi-instance coordination, ranked rating system or ranked matchmaking. See [cloud hosting and cost estimates](docs/CLOUD-HOSTING.md) for the prepared Docker/Caddy deployment and recovery procedure. Human game balance and performance on physical phones remain playtest items.
+This needs a Node backend; static GitHub Pages alone cannot host it. Shared-host rate limits, bounded rooms and request sizes are included. The private snapshot store supports one process; there is no multi-instance coordination, ranked rating system or ranked matchmaking. See [hosting options and cost estimates](docs/CLOUD-HOSTING.md) and the [self-hosting recovery procedure](docs/SELF-HOSTING.md). Human game balance and performance on physical phones remain playtest items.
 
 ## Attribution and submission
 

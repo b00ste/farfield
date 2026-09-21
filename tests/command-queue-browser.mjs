@@ -6,6 +6,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 const origin =
   process.env.TEST_URL || "https://4173--main--ai-dev-01--daniel.kethalia.com";
+const apiOrigin = new URL(process.env.TEST_API_URL || origin).origin;
 const browser = await chromium.launch({
   channel: "chrome",
   headless: true,
@@ -219,7 +220,7 @@ try {
   assert.deepEqual(errors, []);
 } finally {
   if (token && latest)
-    await page.request.post(origin + "/api/leave", {
+    await page.request.post(apiOrigin + "/api/leave", {
       headers: { Authorization: "Bearer " + token },
       data: { code: latest.code },
     });

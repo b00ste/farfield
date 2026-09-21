@@ -117,11 +117,36 @@ try {
     "FARFIELD_STATE_PATH=/data/rooms.json",
     "--env",
     "RF_WAGERS_ENABLED=false",
+    "--env",
+    "FARFIELD_ALLOWED_ORIGINS=https://game.example.invalid",
     image,
   );
   created = true;
   await publishedOrigin();
   await healthy();
+  const preflight = await fetch(`${origin}/api/create`, {
+    method: "OPTIONS",
+    headers: {
+      Origin: "https://game.example.invalid",
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "authorization,content-type",
+    },
+  });
+  assert.ok(preflight.ok);
+  assert.equal(
+    preflight.headers.get("access-control-allow-origin"),
+    "https://game.example.invalid",
+  );
+  const denied = await fetch(`${origin}/api/create`, {
+    method: "OPTIONS",
+    headers: { Origin: "https://unrelated.example.invalid" },
+  });
+  assert.equal(denied.status, 403);
+  assert.equal(denied.headers.get("access-control-allow-origin"), null);
+  report.checks.push({
+    name: "Split-domain preflight allows the game origin and rejects unrelated origins",
+    passed: true,
+  });
   const uid = await docker(
     "exec",
     name,

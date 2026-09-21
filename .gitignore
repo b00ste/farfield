@@ -6,6 +6,12 @@ artifacts/*
 !artifacts/.gitkeep
 *.log
 .env*
+deploy/*.env
+deploy/aws/.terraform/
+deploy/aws/*.tfstate*
+deploy/aws/*.tfplan
+deploy/aws/*.tfvars
+deploy/aws/crash.log
 
 contracts/out/
 contracts/cache/

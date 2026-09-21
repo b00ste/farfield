@@ -1,5 +1,8 @@
 # syntax=docker/dockerfile:1
 FROM node:24-bookworm-slim AS build
+ARG PUBLIC_API_ORIGIN=""
+ARG WALLETCONNECT_PROJECT_ID=1ef81bdbd6e8e9a585c2e94944ee1f6d
+ENV PUBLIC_API_ORIGIN=$PUBLIC_API_ORIGIN WALLETCONNECT_PROJECT_ID=$WALLETCONNECT_PROJECT_ID
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY vendor/rarefriends-friendsdk-0.1.2.tgz ./vendor/rarefriends-friendsdk-0.1.2.tgz

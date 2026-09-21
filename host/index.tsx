@@ -1,4 +1,5 @@
 import { saveSeat, clearSeat } from "./session";
+import { apiUrl } from "./api";
 import { relayRoomStream } from "./room-stream";
 import { createRoot } from "react-dom/client";
 import { WalletApp, walletUi, spriteReader } from "./wallet-host";
@@ -159,18 +160,15 @@ window.addEventListener("message", async (event) => {
         });
       return;
     }
-    const response = await fetch(
-      new URL(`./api/${data.action}`, location.href),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(data.token ? { Authorization: `Bearer ${data.token}` } : {}),
-        },
-        body,
-        signal: AbortSignal.timeout(8000),
+    const response = await fetch(apiUrl(`/api/${data.action}`), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(data.token ? { Authorization: `Bearer ${data.token}` } : {}),
       },
-    );
+      body,
+      signal: AbortSignal.timeout(8000),
+    });
     const result = await response.json();
     // Discard responses to a frame replaced by an account/network/Friend change.
     if (

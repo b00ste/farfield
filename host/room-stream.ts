@@ -1,3 +1,5 @@
+import { apiUrl } from "./api.ts";
+
 /** Parses bounded SSE frames, including UTF-8 and line breaks split across reads. */
 export class RoomEventParser {
   private buffer = "";
@@ -58,7 +60,7 @@ export function relayRoomStream(
     if (active === sentActive) return;
     updating = true;
     try {
-      const response = await fetch(new URL("./api/sync", location.href), {
+      const response = await fetch(apiUrl("/api/sync"), {
         method: "POST",
         headers,
         body: JSON.stringify({ code, active }),
@@ -87,7 +89,7 @@ export function relayRoomStream(
   port.onmessageerror = () => fail("Invalid station subscription.");
   void (async () => {
     try {
-      const response = await fetch(new URL("./api/events", location.href), {
+      const response = await fetch(apiUrl("/api/events"), {
         method: "POST",
         headers,
         body: JSON.stringify({ code, active: sentActive }),
