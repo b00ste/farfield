@@ -1411,14 +1411,41 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 699px) {
   .immersive-game[data-dock="bottom"] .map-controls,
   .immersive-game[data-dock="bottom"] .ability-bar {
     bottom: max(84px, calc(env(safe-area-inset-bottom) + 78px));
   }
 }
 
-@media (max-width: 700px) {
+/* Landscape phones have room for all three clusters along the bottom edge. */
+@media (min-width: 700px) {
+  .immersive-game[data-dock] .ability-bar,
+  .immersive-game[data-dock] .map-controls {
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .immersive-game[data-dock] .ability-bar {
+    left: max(12px, env(safe-area-inset-left));
+    transform: none;
+  }
+  .immersive-game[data-dock] .map-controls {
+    right: max(12px, env(safe-area-inset-right));
+  }
+  .immersive-game[data-dock="bottom"] .action-dock {
+    max-width: calc(100% - 440px - env(safe-area-inset-left) - env(safe-area-inset-right));
+  }
+}
+
+@media (max-width: 699px) {
+  .immersive-game:not([data-dock="bottom"]) .ability-bar {
+    left: max(8px, env(safe-area-inset-left));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    transform: none;
+  }
+  .immersive-game:not([data-dock="bottom"]) .map-controls {
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
 }
 /* Combat modes are immediate icon actions beside the abilities. */
 .immersive-game .ability-bar {
@@ -1464,9 +1491,6 @@
 @media (max-width: 600px) {
   .immersive-game .ability-bar {
     left: 8px;
-  }
-  .immersive-game:not([data-dock="bottom"]) .map-controls {
-    bottom: 10px;
   }
 }
 @media (pointer: coarse) {
@@ -1552,4 +1576,12 @@
 }
 @media (max-width: 600px) {
   .sector-status { top: calc(max(8px, env(safe-area-inset-top)) + 54px); }
+}
+
+/* Touch play stays uncluttered; actual keyboard use reveals shortcut hints. */
+.immersive-game[data-keyboard-hints="false"] kbd {
+  display: none;
+}
+.immersive-game[data-keyboard-hints="true"] kbd {
+  display: inline;
 }

@@ -912,9 +912,8 @@ export function applyCommand(
 }
 export function rates(s: State) {
   return {
-    alloy:
-      0.12 + workPower(s, "miners") * 0.55 + workPower(s, "salvage") * 0.35,
-    energy: 0.25 + workPower(s, "engineers") * 0.7,
+    alloy: workPower(s, "miners") * 0.55 + workPower(s, "salvage") * 0.35,
+    energy: workPower(s, "engineers") * 0.7,
     food:
       workPower(s, "farmers") * 0.8 -
       s.workers.filter((w) => w.hp > 0).length * WORKER_FOOD_UPKEEP,
