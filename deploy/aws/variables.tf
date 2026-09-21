@@ -40,3 +40,13 @@ variable "source_commit" {
     error_message = "source_commit must be a full 40-character Git commit SHA."
   }
 }
+
+variable "friend_rpc_parameter" {
+  description = "Optional existing SecureString path for the private Friend RPC URL; its value never enters Terraform."
+  type        = string
+  default     = ""
+  validation {
+    condition     = var.friend_rpc_parameter == "" || can(regex("^/farfield/[a-z0-9-]+/friend-rpc-url$", var.friend_rpc_parameter))
+    error_message = "Use an empty string or a Farfield-specific /farfield/ENVIRONMENT/friend-rpc-url path."
+  }
+}

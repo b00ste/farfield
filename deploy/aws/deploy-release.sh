@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run as root on the dedicated Farfield VM, through SSM. No cloud keys needed.
 set -euo pipefail
-commit=${1:?Usage: deploy-release.sh FULL_COMMIT GAME_DOMAIN API_DOMAIN BACKUP_BUCKET REGION}
+commit=${1:?Usage: deploy-release.sh FULL_COMMIT GAME_DOMAIN API_DOMAIN BACKUP_BUCKET REGION [FRIEND_RPC_PARAMETER]}
 game_domain=${2:?}
 api_domain=${3:?}
 backup_bucket=${4:?}
@@ -13,6 +13,14 @@ done
 [[ "$backup_bucket" =~ ^farfield-[a-z0-9.-]+$ ]] || { echo "Expected a dedicated Farfield bucket" >&2; exit 1; }
 [[ "$region" =~ ^[a-z]+-[a-z]+-[0-9]+$ ]] || exit 1
 root=/opt/farfield
+friend_rpc_parameter=${6-}
+if [[ $# -lt 6 && -f "$root/friend-rpc-parameter" ]]; then
+  friend_rpc_parameter=$(cat "$root/friend-rpc-parameter")
+fi
+if [[ -n "$friend_rpc_parameter" && ! "$friend_rpc_parameter" =~ ^/farfield/[a-z0-9-]+/friend-rpc-url$ ]]; then
+  echo "Expected a Farfield-specific Friend RPC parameter path" >&2
+  exit 1
+fi
 release="$root/releases/$commit"
 install -d -m 0755 "$root/releases"
 if [[ ! -d "$release/.git" ]]; then
@@ -30,10 +38,40 @@ API_DOMAIN=$api_domain
 PUBLIC_API_ORIGIN=https://$api_domain
 FARFIELD_ALLOWED_ORIGINS=https://$game_domain
 FARFIELD_IMAGE_TAG=$commit
+FARFIELD_RUNTIME_ENV_FILE=$root/runtime.env
 EOF
 compose=(docker compose --project-name farfield --env-file "$candidate_env" -f "$release/deploy/compose.yaml" -f "$release/deploy/compose.split.yaml")
 "${compose[@]}" config --quiet
 "${compose[@]}" build --pull
+# Fetch only on the host after the public image is built. Neither the parameter
+# value nor this private env file can enter Docker's build context or build args.
+if [[ -n "$friend_rpc_parameter" ]]; then
+  rpc_candidate=$(mktemp "$root/runtime-candidate.XXXXXXXX.env")
+  trap 'rm -f "$rpc_candidate"' EXIT
+  AWS_PAGER="" aws ssm get-parameter --name "$friend_rpc_parameter" \
+    --with-decryption --region "$region" --output json | python3 -c '
+import json, os, sys, urllib.parse
+try:
+    value = json.load(sys.stdin)["Parameter"]["Value"]
+    if not isinstance(value, str) or any(ord(char) < 33 or ord(char) == 127 for char in value):
+        raise ValueError()
+    parsed = urllib.parse.urlsplit(value)
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise ValueError()
+    with open(sys.argv[1], "w", encoding="utf8") as stream:
+        stream.write("FRIEND_RPC_URL=" + value + "\n")
+    os.chmod(sys.argv[1], 0o600)
+except Exception:
+    sys.exit("Could not prepare the private Friend RPC configuration")
+' "$rpc_candidate"
+  install -m 0600 "$rpc_candidate" "$root/runtime.env"
+elif [[ $# -ge 6 || ! -f "$root/runtime.env" ]]; then
+  # An explicit empty sixth argument disables this override; omission preserves
+  # an existing manually managed runtime file when no parameter was configured.
+  install -m 0600 /dev/null "$root/runtime.env"
+fi
+printf '%s\n' "$friend_rpc_parameter" > "$root/friend-rpc-parameter"
+chmod 0600 "$root/friend-rpc-parameter"
 # Only replace the current release link after the immutable build succeeds.
 install -m 0600 "$candidate_env" "$root/production.env"
 ln -sfn "$release" "$root/current"

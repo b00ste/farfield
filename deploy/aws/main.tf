@@ -172,6 +172,20 @@ resource "aws_iam_role_policy" "backups" {
   })
 }
 
+resource "aws_iam_role_policy" "friend_rpc" {
+  count = var.friend_rpc_parameter == "" ? 0 : 1
+  name  = "farfield-friend-rpc-read"
+  role  = aws_iam_role.game.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ssm:GetParameter"]
+      Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter${var.friend_rpc_parameter}"
+    }]
+  })
+}
+
 resource "aws_iam_instance_profile" "game" {
   name = var.name
   role = aws_iam_role.game.name

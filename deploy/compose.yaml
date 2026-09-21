@@ -12,6 +12,10 @@ services:
     init: true
     restart: unless-stopped
     stop_grace_period: 30s
+    env_file:
+      - path: ${FARFIELD_RUNTIME_ENV_FILE:-./runtime.env}
+        required: false
+        format: raw
     environment:
       NODE_ENV: production
       PORT: "4173"

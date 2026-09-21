@@ -72,6 +72,59 @@ test. CloudWatch alarms have **no notification destination by default**; connect
 your own alert recipient. Backups record a successful systemd run or a failure in
 the journal; monitor them separately.
 
+## Private Friend RPC provider
+
+An optional server-only RPC URL can be kept in AWS Systems Manager Parameter Store
+as a **SecureString** at `/farfield/production/friend-rpc-url`. Create or rotate its
+value through an authorized operator's private input, using the default AWS-managed
+SSM encryption key. Do not put the URL in Terraform, command arguments, public
+environment examples, Docker build arguments or browser configuration.
+
+Set this **path, not its value**, in your ignored `production.tfvars`:
+
+```hcl
+friend_rpc_parameter = "/farfield/production/friend-rpc-url"
+```
+
+Terraform then adds one inline permission to the dedicated Farfield instance role:
+`ssm:GetParameter` on that exact parameter ARN. It does not grant parameter listing,
+path enumeration, writes or access to other applications' parameters. A custom KMS
+key needs a separately reviewed permission on that exact key; broad KMS access is
+not included.
+
+For an existing deployment, add only this policy with a reviewed targeted plan so
+unrelated bootstrap/user-data changes cannot restart the live server:
+
+```sh
+terraform plan -var-file=production.tfvars \
+  -target='aws_iam_role_policy.friend_rpc[0]' -out=friend-rpc.tfplan
+terraform show -json friend-rpc.tfplan | python3 check-plan.py
+# Confirm exactly one new Farfield policy, no changes or deletions.
+terraform apply friend-rpc.tfplan
+```
+
+On the VM, pass the parameter path as the sixth release-script argument:
+
+```sh
+bash deploy-release.sh FULL_40_CHARACTER_COMMIT \
+  farfield.fun api.farfield.fun farfield-production-backups-ACCOUNT_ID us-east-1 \
+  /farfield/production/friend-rpc-url
+```
+
+After building the public image, the instance retrieves the SecureString without
+printing it, validates that it is an HTTPS URL, and writes
+`/opt/farfield/runtime.env` with mode `0600`. Compose loads this file only into the
+game server at runtime, using raw env-file parsing. The file stays outside the Git
+checkout and image build context. Operators must not dump the resolved Compose
+configuration, container environment or parameter value into shared logs.
+
+The script remembers the parameter **path** for subsequent releases. Omit the
+sixth argument to reuse it; explicitly pass `""` to disable the override. Rotating
+the SecureString requires rerunning deployment to refresh the runtime file and
+replace the container environment. Keep `friend_rpc_parameter` configured in
+Terraform for as long as the override is used. Public RPC remains the default
+when no private override is configured.
+
 ## Operate and recover
 
 ```sh

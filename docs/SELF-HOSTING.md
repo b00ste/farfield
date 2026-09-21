@@ -111,7 +111,9 @@ Separate domains are an organization/deployment boundary, not two independent ga
 | `FRIEND_RPC_URL`           | Optional server runtime | Alternate upstream RPC provider for permitted ownership/artwork reads             |
 | `RF_WAGERS_ENABLED`        | Server runtime          | Keep `false` for this deployment                                                  |
 
-Compose does not pass arbitrary shell variables to the container. For an optional runtime setting such as `FRIEND_RPC_URL`, explicitly add it through a private Compose override or your host's secret/configuration mechanism. Do not commit provider credentials. A `.env` file is not encrypted storage.
+Compose reads optional private runtime settings from `deploy/runtime.env`, or the absolute file path set by `FARFIELD_RUNTIME_ENV_FILE`. This requires Docker Compose 2.30+ for raw environment-file support. Put `FRIEND_RPC_URL` there to use a private provider; keep the file mode `0600`. This is a server-only setting, never a build argument or a frontend environment variable. The supplied Git/Docker ignores exclude the default private file. A local environment file is not encrypted storage; use your host's secret manager for its source of truth.
+
+The browser always calls the game's `/api/friend-rpc` proxy. Only permitted read operations reach the configured upstream, and provider error text/metadata is stripped from replies. Visitors can see the public proxy route but do not receive the upstream URL or API credential. Keep the proxy's request/concurrency limits enabled; a private provider still has its own plan quotas.
 
 The image runs as UID 1000. New named volumes inherit the owned `/data` directory; an existing manually created root-owned volume needs its ownership corrected for that UID. The state file must remain outside `games/farfield/.friendsdk`, and readable only by the service/operator. Saved room capabilities grant access to player seats: do not publish snapshots, logs containing authorization headers, or backup files.
 
