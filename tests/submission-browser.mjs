@@ -1,11 +1,13 @@
 // Browser Testing: logical viewport, actual UI placement/dismantling, reload recovery.
 import { chromium } from "playwright";
 import { installFixture } from "./fixture.mjs";
+import { observeRoom } from "./room-observer.mjs";
 import { placementError } from "../games/farfield/engine.ts";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 const origin =
   process.env.TEST_URL || "https://4173--main--ai-dev-01--daniel.kethalia.com";
+const apiOrigin = new URL(process.env.TEST_API_URL || origin).origin;
 const browser = await chromium.launch({
   channel: "chrome",
   headless: true,
@@ -17,12 +19,17 @@ const context = await browser.newContext({
   page = await context.newPage();
 await installFixture(page, origin);
 let latest, token;
+await observeRoom(page, (view) => {
+  if (!latest || view.revision >= latest.revision) latest = view;
+  if (view.token) token = view.token;
+});
 const errors = [];
+const interactionEvidence = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("response", async (r) => {
   if (/\/api\/(sync|create|command)$/.test(r.url()) && r.ok()) {
-    const v = await r.json();
-    if (v.state) {
+    const v = await r.json().catch(() => null);
+    if (v?.state) {
       latest = v;
       if (v.token) token = v.token;
     }
@@ -38,9 +45,31 @@ const wait = async (fn, why) => {
 const game = page.frameLocator("iframe");
 async function clickGame(button) {
   await button.waitFor();
-  const b = await button.evaluate((e) => {
-    const b = e.getBoundingClientRect();
-    return { x: b.x, y: b.y, width: b.width, height: b.height };
+  // Coordinate clicks bypass Playwright's enabled/stable actionability checks.
+  // Wait for real command acknowledgements and drawer animation before aiming.
+  let b, previous;
+  let sawDisabled = false;
+  const label =
+    (await button.getAttribute("aria-label")) || (await button.innerText());
+  await wait(async () => {
+    if (!(await button.isEnabled())) {
+      sawDisabled = true;
+      return false;
+    }
+    b = await button.evaluate((e) => {
+      const b = e.getBoundingClientRect();
+      return { x: b.x, y: b.y, width: b.width, height: b.height };
+    });
+    const stable =
+      previous &&
+      Object.keys(b).every((key) => Math.abs(b[key] - previous[key]) < 0.25);
+    previous = b;
+    return stable;
+  }, "scaled control is enabled and stable");
+  interactionEvidence.push({
+    label,
+    waitedForPendingCommand: sawDisabled,
+    enabledAtClick: await button.isEnabled(),
   });
   const f = await page.locator("iframe").boundingBox();
   await page.mouse.click(
@@ -111,7 +140,7 @@ try {
     "construction completes",
   );
   // Move back onto core, then inspect the completed edge while the Friend is far enough to dismantle safely.
-  await page.request.post(origin + "/api/command", {
+  await page.request.post(apiOrigin + "/api/command", {
     headers: { Authorization: "Bearer " + token },
     data: { code, command: { type: "direct", ...spawn, task: "move" } },
   });
@@ -127,6 +156,7 @@ try {
   const result = page.waitForResponse(
     (r) =>
       r.url().endsWith("/api/command") &&
+      r.request().method() === "POST" &&
       r.request().postDataJSON().command.type === "demolish",
   );
   await clickGame(game.getByRole("button", { name: /Dismantle/ }));
@@ -165,14 +195,12 @@ try {
     [960, 640],
   );
   // Revoke this real seat server-side, then verify recovery from the resulting expiry.
-  await page.request.post(origin + "/api/leave", {
+  await page.request.post(apiOrigin + "/api/leave", {
     headers: { Authorization: "Bearer " + token },
     data: { code },
   });
   await game
-    .getByText(
-      "This match expired or the server restarted. Return to the main menu to start again.",
-    )
+    .getByText("This match expired. Return to the main menu to start again.")
     .waitFor();
   await clickGame(game.getByRole("button", { name: "Main menu", exact: true }));
   await page.getByRole("button", { name: /Friends & AI/ }).waitFor();
@@ -182,6 +210,14 @@ try {
   );
   token = null;
   assert.deepEqual(errors, []);
+  await writeFile(
+    "artifacts/submission-browser.json",
+    JSON.stringify(
+      { frontend: origin, api: apiOrigin, interactionEvidence, errors },
+      null,
+      2,
+    ),
+  );
   console.log(
     "PASS: 960x640 submission viewport at two sizes, scaled click placement, real floor removal, reload seat recovery, expired-seat exit",
   );
@@ -195,7 +231,7 @@ try {
   throw e;
 } finally {
   if (token)
-    await page.request.post(origin + "/api/leave", {
+    await page.request.post(apiOrigin + "/api/leave", {
       headers: { Authorization: "Bearer " + token },
       data: { code: latest.code },
     });

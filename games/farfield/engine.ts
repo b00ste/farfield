@@ -682,6 +682,8 @@ export function applyCommand(
     );
     if (!module)
       return "Your Friend walks on the station. Build a passage to reach that spot.";
+    if (module.dismantling)
+      return "This building is being dismantled. Choose another completed tile.";
     if (
       (c.task === "move" || !s.modules.includes(module)) &&
       module.progress < 1
@@ -751,8 +753,14 @@ export function applyCommand(
     )
       return "Choose a specialist assignment.";
     const worker = s.workers.find(
-      (w) => w.role === (c.delta > 0 ? "builders" : c.role),
+      (w) => !w.evacuating && w.role === (c.delta > 0 ? "builders" : c.role),
     );
+    if (
+      !worker &&
+      c.delta > 0 &&
+      s.workers.some((w) => w.role === "builders" && w.evacuating)
+    )
+      return "Free workers are clearing a dismantled building. Wait until they reach safety.";
     if (!worker)
       return c.delta > 0
         ? "No free builders. Recruit a worker for this job."
@@ -761,6 +769,8 @@ export function applyCommand(
     if (c.delta > 0 && !destination)
       return "No completed workplace with a free slot.";
     worker.role = c.delta > 0 ? c.role : "builders";
+    worker.stance = undefined;
+    worker.defendAt = undefined;
     resetOrder(
       worker,
       destination?.id ?? null,

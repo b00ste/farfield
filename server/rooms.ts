@@ -5,7 +5,6 @@ import {
   battlefieldCommand,
   advanceBattlefield,
 } from "./battlefield.ts";
-import type { Wager } from "../shared/wagers.ts";
 import { randomBytes } from "node:crypto";
 import {
   applyCommand,
@@ -19,7 +18,6 @@ import {
 import { decide } from "./arena.ts";
 export type Mode = "solo" | "pvp" | "custom" | "online";
 export type Player = {
-  wallet?: `0x${string}`;
   id: string;
   token: string;
   friendId: string;
@@ -27,6 +25,7 @@ export type Player = {
   bot: boolean;
   lastSeen: number;
   active: boolean;
+  departed?: boolean;
   color: string;
   state: State;
   raidReadyAt: number;
@@ -39,7 +38,6 @@ export type Room = {
   monoliths?: import("../games/farfield/engine.ts").Monolith[];
   floor?: import("../games/farfield/engine.ts").Module[];
   hold?: { ownerId: string | null; name: string; seconds: number };
-  wager?: Wager;
   code: string;
   host: string;
   mode: Mode;
@@ -153,7 +151,7 @@ export class Rooms {
   access(code: string, token: string, now = Date.now()) {
     const room = this.rooms.get(code),
       current = room?.players.find(
-        (p) => !p.bot && p.token === token && token.length > 0,
+        (p) => !p.bot && !p.departed && p.token === token && token.length > 0,
       );
     if (!room || !current)
       throw new Error("This room session expired. Join the match again.");
@@ -161,7 +159,8 @@ export class Rooms {
     room.touched = now;
     if (
       !room.players.some(
-        (p) => p.token === room.host && now - p.lastSeen < 15_000,
+        (p) =>
+          !p.departed && p.token === room.host && now - p.lastSeen < 15_000,
       )
     )
       room.host = token;
@@ -180,12 +179,6 @@ export class Rooms {
       mode: room.mode,
       selfId: own.id,
       maxPlayers: room.mode === "online" ? 2 : 4,
-      economy: {
-        kind: room.wager ? ("wager" as const) : ("practice" as const),
-        entry: room.wager ? "1" : "0",
-        payoutsEnabled: !!room.wager,
-        wager: room.wager,
-      },
       combatAt: room.combatAt,
       raidReadyAt: own.raidReadyAt,
       winnerId: room.winnerId,
@@ -215,7 +208,7 @@ export class Rooms {
         bot: p.bot,
         difficulty: p.state.difficulty,
         color: p.color,
-        online: p.bot || now - p.lastSeen < 8000,
+        online: p.bot || (!p.departed && now - p.lastSeen < 8000),
         host: p.token === room.host,
       })),
     };
@@ -260,8 +253,6 @@ export class Rooms {
       current.state.log.unshift("You forfeited this match.");
       this.settle(room);
     } else if (command.type === "start") {
-      if (room.wager)
-        throw new Error("Both escrow deposits must confirm before launch.");
       if (room.players.length < 2)
         throw new Error(
           "Invite at least one rival before launching multiplayer.",
@@ -295,23 +286,39 @@ export class Rooms {
   }
   advance(dt: number, now = Date.now()) {
     for (const room of this.rooms.values()) {
+      // Visibility is a rendering hint, not permission to pause competitive
+      // play. Keep online matches running throughout the reconnect window,
+      // even when every tab is hidden or every connection has dropped.
+      const onlinePlaying =
+        room.mode === "online" &&
+        room.players.some((p) => p.state.phase === "playing");
       if (
         room.winnerId ||
-        !room.players.some((p) => !p.bot && p.active && now - p.lastSeen < 8000)
+        room.draw ||
+        (!onlinePlaying &&
+          !room.players.some(
+            (p) => !p.bot && p.active && now - p.lastSeen < 8000,
+          ))
       )
         continue;
+
+      if (onlinePlaying) {
+        for (const p of room.players) {
+          if (p.state.phase === "playing" && now - p.lastSeen > 60_000) {
+            p.state.phase = "lost";
+            p.state.integrity = 0;
+            p.state.elimination = { reason: "disconnect" };
+            p.state.log.unshift("Connection timed out after 60 seconds.");
+          }
+        }
+        this.settle(room);
+        if (room.winnerId || room.draw) {
+          room.revision++;
+          continue;
+        }
+      }
       syncTerrain(room);
       for (const p of room.players) {
-        if (
-          room.mode === "online" &&
-          p.state.phase === "playing" &&
-          now - p.lastSeen > 60_000
-        ) {
-          p.state.phase = "lost";
-          p.state.integrity = 0;
-          p.state.elimination = { reason: "disconnect" };
-          p.state.log.unshift("Connection timed out after 60 seconds.");
-        }
         tick(
           p.state,
           dt,
@@ -366,54 +373,30 @@ export class Rooms {
     room.players.push(bot);
     positionPlayers(room);
   }
-  matchmake(
-    friendId: string,
-    now = Date.now(),
-    wager?: Wager,
-    wallet?: `0x${string}`,
-  ) {
+  matchmake(friendId: string, now = Date.now()) {
     this.clean(now);
     for (const room of this.rooms.values()) {
       if (
         room.mode !== "online" ||
-        !!room.wager !== !!wager ||
         room.players.length !== 1 ||
         room.players[0].state.phase !== "ready" ||
         now - room.players[0].lastSeen > 8000
       )
         continue;
-      if (
-        room.players[0].friendId === friendId ||
-        (wallet &&
-          room.players[0].wallet?.toLowerCase() === wallet.toLowerCase())
-      )
+      if (room.players[0].friendId === friendId)
         throw new Error("This Friend is already searching for a match.");
       const rival = player(friendId, 1, room, now);
-      rival.wallet = wallet;
       room.players.push(rival);
       positionPlayers(room);
-      if (!wager)
-        for (const p of room.players) applyCommand(p.state, { type: "start" });
+      for (const p of room.players) applyCommand(p.state, { type: "start" });
       room.touched = now;
       room.revision++;
       return { token: rival.token, ...this.view(room, rival.token, now) };
     }
-    const created = this.create(friendId, now, "normal", "online");
-    const room = this.rooms.get(created.code)!;
-    room.wager = wager;
-    room.players[0].wallet = wallet;
-    return { token: created.token, ...this.view(room, created.token, now) };
+    return this.create(friendId, now, "normal", "online");
   }
   leave(code: string, token: string, now = Date.now()) {
     const { room, player: current } = this.access(code, token, now);
-    if (
-      room.wager &&
-      room.players.length === 2 &&
-      current.state.phase === "ready"
-    )
-      throw new Error(
-        "An escrow match is assigned. Use the deposit panel to track funding and timeout refunds.",
-      );
     if (current.state.phase === "playing") {
       current.state.phase = "lost";
       current.state.integrity = 0;
@@ -425,10 +408,8 @@ export class Rooms {
         room.host = room.players.find((p) => !p.bot)?.token ?? "";
     }
     current.active = false;
-    if (
-      (!room.wager || !room.players.length) &&
-      !room.players.some((p) => !p.bot && p.active)
-    )
+    current.departed = true;
+    if (!room.players.some((p) => !p.bot && !p.departed))
       this.rooms.delete(code);
     room.revision++;
     return { left: true };

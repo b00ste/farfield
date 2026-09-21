@@ -1,4 +1,8 @@
+import "./storage-fallback";
+import "./pwa-register";
 import { saveSeat, clearSeat } from "./session";
+import { apiUrl } from "./api";
+import { relayRoomStream } from "./room-stream";
 import { createRoot } from "react-dom/client";
 import { WalletApp, walletUi, spriteReader } from "./wallet-host";
 import "@rarefriends/friendsdk/frame.css";
@@ -12,6 +16,7 @@ const actions = new Set([
   "create",
   "join",
   "sync",
+  "subscribe",
   "command",
   "art",
   "setup",
@@ -19,10 +24,12 @@ const actions = new Set([
   "matchmake",
   "leave",
   "preferences",
-  "escrow",
   "wallet",
 ]);
 let inFlight = 0;
+let stopStream: (() => void) | undefined;
+window.addEventListener("pagehide", () => stopStream?.());
+window.addEventListener("farfield-home", () => stopStream?.());
 window.addEventListener("message", async (event) => {
   const frame = document.querySelector<HTMLIFrameElement>(
     ".rf-frame-viewport iframe",
@@ -49,7 +56,7 @@ window.addEventListener("message", async (event) => {
     port.close();
     return;
   }
-  if (walletUi.blocked && data.action !== "sync") {
+  if (walletUi.blocked && !["sync", "subscribe"].includes(data.action)) {
     port.postMessage({ error: "Close the wallet menu before playing." });
     port.close();
     return;
@@ -65,17 +72,33 @@ window.addEventListener("message", async (event) => {
     port.close();
     return;
   }
+  if (data.action === "subscribe") {
+    if (
+      typeof data.body.code !== "string" ||
+      !/^[A-F0-9]{10}$/.test(data.body.code)
+    ) {
+      port.postMessage({ error: "Invalid station code." });
+      port.close();
+      return;
+    }
+    stopStream?.();
+    stopStream = relayRoomStream(
+      port,
+      data.token,
+      data.body.code,
+      data.body.active === true,
+      () =>
+        document.querySelector<HTMLIFrameElement>(".rf-frame-viewport iframe")
+          ?.contentWindow === event.source,
+      () => walletUi.blocked,
+    );
+    return;
+  }
   inFlight++;
   try {
-    if (data.action === "escrow" || data.action === "wallet") {
-      if (data.action === "escrow" && !/^0x[0-9a-fA-F]{64}$/.test(data.body.id))
-        throw new Error("Invalid escrow match.");
+    if (data.action === "wallet") {
       port.postMessage({ result: { ok: true } });
-      window.dispatchEvent(
-        data.action === "escrow"
-          ? new CustomEvent("farfield-escrow", { detail: data.body.id })
-          : new Event("farfield-wallet"),
-      );
+      window.dispatchEvent(new Event("farfield-wallet"));
       return;
     }
     if (data.action === "setup") {
@@ -132,18 +155,15 @@ window.addEventListener("message", async (event) => {
         });
       return;
     }
-    const response = await fetch(
-      new URL(`./api/${data.action}`, location.href),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(data.token ? { Authorization: `Bearer ${data.token}` } : {}),
-        },
-        body,
-        signal: AbortSignal.timeout(8000),
+    const response = await fetch(apiUrl(`/api/${data.action}`), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(data.token ? { Authorization: `Bearer ${data.token}` } : {}),
       },
-    );
+      body,
+      signal: AbortSignal.timeout(8000),
+    });
     const result = await response.json();
     // Discard responses to a frame replaced by an account/network/Friend change.
     if (
@@ -165,7 +185,7 @@ window.addEventListener("message", async (event) => {
         friendId: walletUi.friendId,
         account: walletUi.account,
         chainId: walletUi.chainId!,
-        launch: { ...walletUi.launch, auth: undefined },
+        launch: { ...walletUi.launch },
       });
     if (response.ok && data.action === "leave") clearSeat();
     port.postMessage(

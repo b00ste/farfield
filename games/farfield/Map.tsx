@@ -1,3 +1,4 @@
+import type { OrderMarker } from "./order-feedback.ts";
 import { useEffect, useRef, useState } from "react";
 import {
   render,
@@ -10,6 +11,7 @@ import {
 import { visualPosition } from "./actors.ts";
 import type { State, Point } from "./engine.ts";
 export function StationMap({
+  orderMarker,
   state,
   contacts,
   ghost,
@@ -26,6 +28,7 @@ export function StationMap({
   onPlace,
   focusPoint,
 }: {
+  orderMarker: OrderMarker | null;
   focusPoint: (Point & { follow?: boolean }) | null;
   contacts: import("./render.ts").Contact[];
   state: State;
@@ -56,6 +59,7 @@ export function StationMap({
     reduced,
     animation,
     inspectedId,
+    orderMarker,
     placing,
   });
   latest.current = {
@@ -66,6 +70,7 @@ export function StationMap({
     reduced,
     animation,
     inspectedId,
+    orderMarker,
     placing,
   };
   const lastSpawn = useRef("");
@@ -178,6 +183,7 @@ export function StationMap({
         elapsed,
         inspectedId,
         contacts,
+        latest.current.orderMarker,
       );
       frame = requestAnimationFrame(draw);
     };

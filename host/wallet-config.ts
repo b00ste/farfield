@@ -1,11 +1,13 @@
 import { connectorsForWallets, darkTheme } from "@rainbow-me/rainbowkit";
 import {
   injectedWallet,
-  rainbowWallet,
+  zerionWallet,
+  metaMaskWallet,
   walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
-import { createConfig, http } from "wagmi";
+import { createConfig, createStorage, http } from "wagmi";
 import { defineChain } from "viem";
+import { apiUrl } from "./api";
 
 // Public application identifier, not a secret or wallet credential. Override at build time.
 export const walletConnectProjectId = __WALLETCONNECT_PROJECT_ID__;
@@ -26,18 +28,44 @@ const connectors = connectorsForWallets(
     {
       groupName: "Connect to Farfield",
       wallets: walletConnectProjectId
-        ? [injectedWallet, rainbowWallet, walletConnectWallet]
+        ? [injectedWallet, zerionWallet, metaMaskWallet, walletConnectWallet]
         : [injectedWallet],
     },
   ],
   { appName: "Farfield", projectId: walletConnectProjectId },
 );
 export const walletConfig = createConfig({
+  // Access can be denied by browser privacy settings, including the getter itself.
+  storage: createStorage({
+    storage: {
+      getItem(key) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch {
+          return null;
+        }
+      },
+      setItem(key, value) {
+        try {
+          window.localStorage.setItem(key, value);
+        } catch {
+          /* Session only. */
+        }
+      },
+      removeItem(key) {
+        try {
+          window.localStorage.removeItem(key);
+        } catch {
+          /* Session only. */
+        }
+      },
+    },
+  }),
   chains: [robinhood],
   connectors,
   multiInjectedProviderDiscovery: true,
   transports: {
-    [robinhood.id]: http(new URL("./api/friend-rpc", location.href).href, {
+    [robinhood.id]: http(apiUrl("/api/friend-rpc"), {
       batch: false,
       retryCount: 1,
       timeout: 12000,

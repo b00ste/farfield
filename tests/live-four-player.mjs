@@ -1,6 +1,7 @@
 // Browser Testing only. Four real clients on live HTTP simulation; only wallet/NFT RPC is mocked.
 import { chromium } from "playwright";
 import { installFixture } from "./fixture.mjs";
+import { observeRoom } from "./room-observer.mjs";
 import { place } from "../server/arena.ts";
 import { routeTo } from "../games/farfield/actors.ts";
 import { housing, capacity, MODULES } from "../games/farfield/engine.ts";
@@ -8,6 +9,7 @@ import { writeFile, mkdir } from "node:fs/promises";
 import assert from "node:assert/strict";
 const origin =
   process.env.TEST_URL || "https://4173--main--ai-dev-01--daniel.kethalia.com";
+const apiOrigin = new URL(process.env.TEST_API_URL || origin).origin;
 const duration = Number(process.env.PLAY_SECONDS || 420);
 const browser = await chromium.launch({
   channel: "chrome",
@@ -20,12 +22,20 @@ const browser = await chromium.launch({
 });
 const clients = [],
   report = {
+    frontend: origin,
+    api: apiOrigin,
     started: new Date().toISOString(),
     errors: [],
     httpErrors: [],
     commands: [],
     samples: [],
     timings: [],
+    transport: {
+      streamRequests: 0,
+      syncRequests: 0,
+      stateMessages: 0,
+      streamOrigins: [],
+    },
   };
 await mkdir("artifacts", { recursive: true });
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -39,7 +49,7 @@ async function wait(fn, label, ms = 30000) {
 }
 async function command(c, cmd) {
   const t = performance.now();
-  const r = await c.page.request.post(origin + "/api/command", {
+  const r = await c.page.request.post(apiOrigin + "/api/command", {
     headers: { Authorization: "Bearer " + c.token },
     data: { code: c.code, command: cmd },
   });
@@ -76,16 +86,43 @@ async function connect(i) {
   };
   clients.push(c);
   await installFixture(page, origin);
+  await observeRoom(page, (view) => {
+    report.transport.stateMessages++;
+    if (!c.latest || view.revision >= c.latest.revision) c.latest = view;
+    c.code = view.code;
+    if (view.token) c.token = view.token;
+  });
+  page.on("request", (request) => {
+    const url = new URL(request.url()),
+      path = url.pathname;
+    if (path === "/api/events") {
+      report.transport.streamRequests++;
+      if (!report.transport.streamOrigins.includes(url.origin))
+        report.transport.streamOrigins.push(url.origin);
+    }
+    if (path === "/api/sync") report.transport.syncRequests++;
+  });
   page.on("pageerror", (e) =>
     report.errors.push({ client: i, pageError: e.message }),
   );
   page.on("response", async (r) => {
-    if (!r.url().startsWith(origin + "/api/")) return;
+    if (!r.url().startsWith(apiOrigin + "/api/")) return;
     if (r.status() >= 400)
       report.httpErrors.push({
         client: i,
         status: r.status(),
         path: new URL(r.url()).pathname,
+        at: new Date().toISOString(),
+        ...(report.httpErrors.length < 4
+          ? {
+              body: (await r.text().catch(() => "<unavailable>")).slice(
+                0,
+                1000,
+              ),
+              contentType: r.headers()["content-type"],
+              server: r.headers()["server"],
+            }
+          : {}),
       });
     if (/\/api\/(sync|create|join|command)$/.test(r.url()) && r.ok()) {
       const v = await r.json().catch(() => null);
@@ -442,6 +479,7 @@ try {
   }
   // Test a refresh without resetting the room: report recovery, do not conceal a new seat.
   const prior = clients[3].latest.selfId;
+  const streamsBeforeRefresh = report.transport.streamRequests;
   clients[3].latest = null;
   await clients[3].page.reload();
   await pause(3000);
@@ -463,6 +501,12 @@ try {
     "game returns after reload",
     30000,
   );
+  await clients[3].game.locator(".sector-status").waitFor();
+  if (process.env.EXPECT_STREAM === "1")
+    await wait(
+      () => report.transport.streamRequests > streamsBeforeRefresh,
+      "fresh game reconnects live stream after reload",
+    );
   await wait(
     () => clients[3].latest?.selfId === prior,
     "same seat after reload",
@@ -478,6 +522,27 @@ try {
     time: c.latest.state.time,
   }));
   report.completed = new Date().toISOString();
+  assert.equal(report.errors.length, 0, "live gameplay and page errors");
+  assert.equal(report.httpErrors.length, 0, "live transport HTTP errors");
+  if (process.env.EXPECT_STREAM === "1") {
+    assert.deepEqual(
+      report.transport.streamOrigins,
+      [apiOrigin],
+      "browser streams use the configured API origin",
+    );
+    assert.ok(
+      report.transport.streamRequests >= 4,
+      "all four clients request live streams",
+    );
+    assert.ok(
+      report.transport.syncRequests < duration * 2,
+      "live sessions do not fall back to rapid HTTP polling",
+    );
+    assert.ok(
+      report.transport.stateMessages > duration,
+      "continuous RoomView messages arrive through the host",
+    );
+  }
   console.log(
     "LIVE COMPLETE",
     JSON.stringify({
@@ -499,7 +564,7 @@ try {
   for (const c of clients)
     if (c.token)
       await c.page.request
-        .post(origin + "/api/leave", {
+        .post(apiOrigin + "/api/leave", {
           headers: { Authorization: "Bearer " + c.token },
           data: { code: c.code },
         })

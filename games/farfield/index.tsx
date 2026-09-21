@@ -1,3 +1,8 @@
+import {
+  commandPoint,
+  friendOrder,
+  type OrderMarker,
+} from "./order-feedback.ts";
 import { ABILITIES, type Ability } from "./combat.ts";
 import { GameSelect } from "./GameSelect.tsx";
 import { matchResult } from "./results.ts";
@@ -17,7 +22,13 @@ import {
   type Command,
   type Point,
 } from "./engine.ts";
-import { request, send, type RoomView, type Session } from "./network.ts";
+import {
+  request,
+  send,
+  subscribe,
+  type RoomView,
+  type Session,
+} from "./network.ts";
 import { StationMap } from "./Map.tsx";
 import { Crew } from "./Crew.tsx";
 import { JOBS, TASK_LABELS, ROLE_NAMES, housing, workPower } from "./actors.ts";
@@ -44,19 +55,31 @@ function ActionIcon({
     | "rotate"
     | "place"
     | "remove"
-    | "work"
+    | "hammer"
+    | "attack"
+    | "heal"
+    | "mine"
+    | "farm"
+    | "energy"
+    | "research"
     | "repair"
     | "recruit"
     | "close";
 }) {
+  if (kind === "workers")
+    return <UnitIcon group="workers" className="action-icon" />;
   const paths = {
     build: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 16h7m-3.5-3.5v7",
-    workers:
-      "M9 8a3 3 0 1 0 6 0 3 3 0 1 0-6 0M6 21v-4a6 6 0 0 1 12 0v4M3 10a2 2 0 1 0 0 4m18-4a2 2 0 1 1 0 4M2 21v-3m20 3v-3",
     rotate: "M19 9a8 8 0 1 0 1 7M19 3v6h-6",
     place: "m4 12 5 5L20 6",
     remove: "M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7",
-    work: "M5 6a3 3 0 1 0 6 0 3 3 0 1 0-6 0M3 21v-6a5 5 0 0 1 9-3M15 4l6 6m-4-4-5 5m0 6 6-6m-3 9 6-6",
+    hammer: "m14 3 7 7-3 3-7-7zM13 11 4 20l-2-2 9-9",
+    attack: "M3 3l5 1 12 12-4 4L4 8zM3 21l5-5m8-8 5-5M2 14l8 8m4-20 8 8",
+    heal: "M9 3h6v6h6v6h-6v6H9v-6H3V9h6z",
+    mine: "M3 5c6-3 12 0 17 6M5 4l5 6m-7 11L16 8",
+    farm: "M5 18C0 8 10 3 21 3c0 12-6 19-16 15zM3 21 16 8",
+    energy: "m14 2-9 12h6l-1 8 9-13h-6z",
+    research: "M9 3h6M10 3v7L4 20h16l-6-10V3M8 14h8",
     repair:
       "M15 4a5 5 0 0 0-6 6L3 16a3 3 0 0 0 5 4l6-6a5 5 0 0 0 6-6l-4 3-3-3 3-4Z",
     recruit:
@@ -78,6 +101,45 @@ function ActionIcon({
     </svg>
   );
 }
+function UnitIcon({
+  group,
+  className,
+}: {
+  group: "friend" | "workers";
+  className: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="16" cy="9" r="4" />
+      <path d="M10 26v-7a6 6 0 0 1 12 0v7M13 26v-7m6 7v-7" />
+      {group === "workers" && (
+        <>
+          <circle cx="5" cy="13" r="3" />
+          <circle cx="27" cy="13" r="3" />
+          <path d="M1 26v-5a4 4 0 0 1 7-3m23 8v-5a4 4 0 0 0-7-3" />
+        </>
+      )}
+    </svg>
+  );
+}
+const WORK_ICONS = {
+  core: "mine",
+  passage: "hammer",
+  solar: "energy",
+  garden: "farm",
+  foundry: "mine",
+  habitat: "hammer",
+  turret: "attack",
+  lab: "research",
+  infirmary: "heal",
+} as const;
 const clock = (s: number) =>
   `${Math.floor(s / 60)
     .toString()
@@ -198,6 +260,14 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
         ?.focus({ preventScroll: true }),
     );
   const queued = useRef<Command[]>([]);
+  const commandRef = useRef<((c: Command) => Promise<void>) | null>(null);
+  const orderEpoch = useRef(0);
+  const clearPendingOrders = () => {
+    queued.current = [];
+    orderEpoch.current++;
+    setOrderMarker(null);
+  };
+  const [orderMarker, setOrderMarker] = useState<OrderMarker | null>(null);
   const [inspectedId, setInspectedId] = useState<number | null>(null);
   const [drawer, setDrawer] = useState<"build" | "crew" | null>(null);
   const [dock, setDock] = useState<"bottom" | "left" | "right">("bottom");
@@ -235,6 +305,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
         return;
       if (event.key === "Escape") {
         event.preventDefault();
+        clearPendingOrders();
         setSelected(null);
         setGhost(null);
         setInspectedId(null);
@@ -317,6 +388,10 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
   );
   const state = room?.state || empty,
     halted = paused || !!panel || offline;
+  useEffect(() => {
+    if (halted || state.paused || state.phase !== "playing")
+      clearPendingOrders();
+  }, [halted, state.paused, state.phase]);
   blocked.current = paused || !!panel;
   active.current = !blocked.current && !document.hidden;
   useEffect(() => {
@@ -328,6 +403,8 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
     sound.current = createFriendSoundKit({ muted: true });
     return () => {
       alive.current = false;
+      queued.current = [];
+      orderEpoch.current++;
       pref.removeEventListener("change", change);
       sound.current?.dispose();
     };
@@ -374,18 +451,24 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
       cancelled = true;
     };
   }, [friendId, retry]);
+  const roomStream = useRef<ReturnType<typeof subscribe> | null>(null);
+  useEffect(() => {
+    roomStream.current?.presence(active.current);
+  }, [paused, panel]);
   useEffect(() => {
     if (!session) return;
     let stopped = false;
+    let attempts = 0;
     let timer: ReturnType<typeof setTimeout>;
-    const sync = async () => {
-      try {
-        const view = await request<RoomView>(
-          "sync",
-          { code: session.code, active: active.current },
-          session.token,
-        );
-        if (!stopped) {
+    const connect = () => {
+      if (stopped) return;
+      roomStream.current?.close();
+      roomStream.current = subscribe(
+        session,
+        active.current,
+        (view) => {
+          if (stopped) return;
+          attempts = 0;
           setRoom((previous) =>
             !previous ||
             previous.code !== view.code ||
@@ -394,38 +477,53 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
               : previous,
           );
           setOffline(false);
-        }
-      } catch (error) {
-        if (!stopped) {
+        },
+        (error) => {
+          if (stopped) return;
           setOffline(true);
-          if (
-            error instanceof Error &&
-            error.message.includes("session expired")
-          ) {
+          if (error.message.includes("session expired")) {
             setError(
-              "This match expired or the server restarted. Return to the main menu to start again.",
+              "This match expired. Return to the main menu to start again.",
             );
             setSession(null);
+            return;
           }
-        }
-      } finally {
-        if (!stopped) timer = setTimeout(sync, 250);
-      }
+          // Reconnect without flooding a struggling proxy; never replay old commands.
+          timer = setTimeout(connect, Math.min(1000 * 2 ** attempts++, 10000));
+        },
+      );
     };
-    void sync();
+    connect();
     const hidden = () => {
       active.current = !document.hidden && !blocked.current;
+      roomStream.current?.presence(active.current);
+    };
+    const disconnected = () => {
+      clearTimeout(timer);
+      roomStream.current?.close();
+      setOffline(true);
+    };
+    const reconnected = () => {
+      clearTimeout(timer);
+      attempts = 0;
+      connect();
+    };
+    const restored = (event: PageTransitionEvent) => {
+      if (event.persisted) reconnected();
     };
     document.addEventListener("visibilitychange", hidden);
+    window.addEventListener("offline", disconnected);
+    window.addEventListener("online", reconnected);
+    window.addEventListener("pageshow", restored);
     return () => {
       stopped = true;
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", hidden);
-      void request(
-        "sync",
-        { code: session.code, active: false },
-        session.token,
-      ).catch(() => {});
+      window.removeEventListener("offline", disconnected);
+      window.removeEventListener("online", reconnected);
+      window.removeEventListener("pageshow", restored);
+      roomStream.current?.close();
+      roomStream.current = null;
     };
   }, [session]);
   useEffect(() => {
@@ -458,8 +556,6 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                   : "create",
               {
                 friendId: String(friendId),
-                wager: config.wager,
-                auth: config.auth,
                 code: config.code,
                 mode: config.mode,
                 bots: config.bots,
@@ -499,17 +595,42 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
     await request("home", {});
   };
   const command = async (c: Command) => {
-    if (!session || halted) return;
+    if (!session || halted || (state.paused && c.type !== "pause")) return;
     if (locked.current) {
+      const friendOrders = [
+        "direct",
+        "attack",
+        "capture",
+        "gather",
+        "stop-friend",
+      ];
+      if (friendOrders.includes(c.type))
+        queued.current = queued.current.filter(
+          (order) => !friendOrders.includes(order.type),
+        );
       queued.current.push(c);
       return;
     }
     locked.current = true;
+    const epoch = orderEpoch.current;
+    const point = commandPoint(state, c);
+    if (point)
+      setOrderMarker({
+        point,
+        status: "pending",
+        until: performance.now() + 10000,
+      });
     setBusy(true);
     setError("");
     try {
       const view = await send(session, c);
       if (alive.current) {
+        if (point && epoch === orderEpoch.current)
+          setOrderMarker({
+            point,
+            status: "accepted",
+            until: performance.now() + 1800,
+          });
         setRoom((previous) =>
           !previous ||
           previous.code !== view.code ||
@@ -517,7 +638,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
             ? view
             : previous,
         );
-        if (c.type === "build") {
+        if (c.type === "build" && epoch === orderEpoch.current) {
           setGhost(null);
           setSelected(null);
           setInspectedId(view.state.modules.at(-1)?.id ?? null);
@@ -525,17 +646,25 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
         }
       }
     } catch (e) {
-      if (alive.current)
+      if (alive.current && epoch === orderEpoch.current) {
+        if (point)
+          setOrderMarker({
+            point,
+            status: "rejected",
+            until: performance.now() + 2500,
+          });
         setError(e instanceof Error ? e.message : "Command failed.");
+      }
     } finally {
       locked.current = false;
       if (alive.current) {
         setBusy(false);
         const next = queued.current.shift();
-        if (next) void command(next);
+        if (next) void commandRef.current?.(next);
       }
     }
   };
+  commandRef.current = command;
   // Settings actions can submit while a personal modal blocks map input; worker drawers stay live.
   const crewCommand = async (c: Command) => {
     if (!session || locked.current || paused || offline) return;
@@ -560,7 +689,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
       if (alive.current) {
         setBusy(false);
         const next = queued.current.shift();
-        if (next) void command(next);
+        if (next) void commandRef.current?.(next);
       }
     }
   };
@@ -684,7 +813,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
             <small>ALLOY</small>
           </button>
           <button
-            title="Energy powers rooms, research and defense"
+            title="Energy powers Shield (Q) and EMP (E)"
             onClick={() => setPanel("help")}
           >
             <span className="energy">ϟ</span>
@@ -758,6 +887,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
       )}
       <div className="world-stage">
         <StationMap
+          orderMarker={orderMarker}
           focusPoint={focusPoint}
           state={watching?.state ?? state}
           contacts={[]}
@@ -858,16 +988,18 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
         </div>
       )}
       {state.phase === "playing" && (
-        <div className="combat-readout" role="status">
+        <div
+          className="combat-readout"
+          role="status"
+          data-testid="friend-order"
+        >
           {state.friend.hp <= 0
             ? "Friend down — respawning at your core"
             : state.time - state.friend.lastHit < 1.5
               ? "UNDER FIRE · Shield or retreat to heal"
-              : state.friend.attack
-                ? `ATTACKING · ${state.terrain?.find((m) => m.id === state.friend.attack?.moduleId)?.type ? MODULES[state.terrain!.find((m) => m.id === state.friend.attack?.moduleId)!.type].name : "Enemy"}`
-                : (state.abilities?.shieldUntil ?? 0) > state.time
-                  ? "SHIELD ACTIVE · 65% less damage"
-                  : ""}
+              : (state.abilities?.shieldUntil ?? 0) > state.time
+                ? `Shield active · ${friendOrder(state)}`
+                : friendOrder(state)}
         </div>
       )}
       <span className="sr-only" data-testid="friend-task">
@@ -891,34 +1023,17 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
           <div>
             <strong>
               {room.mode === "online"
-                ? room.economy.wager && room.players.length === 2
-                  ? `Escrow · ${room.economy.wager.status}`
-                  : "Searching for an opponent…"
+                ? "Searching for an opponent…"
                 : "Your sector is ready"}
             </strong>
             <span>
               {room.mode === "online"
-                ? room.economy.wager
-                  ? "1 RF each · 2 RF winner pool · both deposits required"
-                  : "Practice · no deposit or payout"
+                ? "1 vs 1 · match starts when an opponent joins"
                 : `${room.players.length} / ${room.maxPlayers} commanders · invite friends or add AI`}
             </span>
           </div>
           {room.mode === "online" ? (
-            room.economy.wager && room.players.length === 2 ? (
-              <button
-                disabled={
-                  !["funding", "active"].includes(room.economy.wager.status)
-                }
-                onClick={() =>
-                  void request("escrow", { id: room.economy.wager!.id })
-                }
-              >
-                Review & deposit 1 RF
-              </button>
-            ) : (
-              <button onClick={() => void returnHome()}>Cancel search</button>
-            )
+            <button onClick={() => void returnHome()}>Cancel search</button>
           ) : (
             <>
               <button onClick={() => setPanel("match")}>Invite & AI</button>
@@ -1159,24 +1274,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                   focusLevel();
                 }}
               >
-                <svg
-                  viewBox="0 0 32 32"
-                  aria-hidden="true"
-                  className="mode-unit-icon"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <circle cx="16" cy="9" r="4" />
-                  <path d="M10 26v-7a6 6 0 0 1 12 0v7M13 26v-7m6 7v-7" />
-                  {group === "workers" && (
-                    <>
-                      <circle cx="5" cy="13" r="3" />
-                      <circle cx="27" cy="13" r="3" />
-                      <path d="M1 26v-5a4 4 0 0 1 7-3m23 8v-5a4 4 0 0 0-7-3" />
-                    </>
-                  )}
-                </svg>
+                <UnitIcon group={group} className="mode-unit-icon" />
                 <svg
                   className="mode-state-icon"
                   viewBox="0 0 20 20"
@@ -1316,7 +1414,13 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                       state.friend.order === "work"
                     }
                   >
-                    <ActionIcon kind="work" />
+                    <ActionIcon
+                      kind={
+                        inspected!.progress < 1
+                          ? "hammer"
+                          : WORK_ICONS[inspected!.type]
+                      }
+                    />
                     {inspected!.progress < 1 && (
                       <small>{Math.floor(inspected!.progress * 100)}%</small>
                     )}
@@ -1362,7 +1466,6 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                         title={`Recruit ${ROLE_NAMES[inspectedRole ?? "builders"].toLowerCase()} — 6 alloy, 8 food`}
                       >
                         <ActionIcon kind="recruit" />
-                        <small>6 ⬡ · 8 ♧</small>
                       </button>
                     )}
                 </>
@@ -1410,26 +1513,6 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
             <p>
               {linked}/4 signals · {state.placed} modules · {clock(state.time)}
             </p>
-            {room?.economy.wager ? (
-              <>
-                <p>
-                  Escrow: {room.economy.wager.status}.{" "}
-                  {room.economy.wager.status === "refundable"
-                    ? "The result window expired. Claim your refund."
-                    : "The winner claims the full 2 RF once settlement confirms."}
-                </p>
-                <button
-                  className="primary"
-                  onClick={() =>
-                    void request("escrow", { id: room.economy.wager!.id })
-                  }
-                >
-                  Open payout / refund
-                </button>
-              </>
-            ) : (
-              <p>Practice match · no tokens deposited or paid out.</p>
-            )}
             <button
               className="primary launch"
               onClick={() => void returnHome()}
@@ -1659,16 +1742,6 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
               >
                 Wallet & connection →
               </button>
-              {room?.economy.wager && (
-                <button
-                  className="setting-row"
-                  onClick={() =>
-                    void request("escrow", { id: room.economy.wager!.id })
-                  }
-                >
-                  RF escrow / refunds →
-                </button>
-              )}
               <button
                 className="setting-row"
                 aria-pressed={!muted}
@@ -1722,9 +1795,8 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                   {confirmForfeit && (
                     <>
                       <p>
-                        {room?.economy.wager
-                          ? "Forfeiting awards the full 2 RF pool to your opponent."
-                          : "Your station will lose immediately. The other commanders can continue."}
+                        Your station will lose immediately. The other commanders
+                        can continue.
                       </p>
                       <button
                         className="danger"
@@ -1749,11 +1821,9 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
               )}
               <p className="note">
                 {room?.mode === "online"
-                  ? room.economy.wager
-                    ? "1 RF online match · winner claims 2 RF. Disconnects longer than 60 seconds forfeit."
-                    : "Online practice · 1 vs 1 · no deposit or payout. Disconnects longer than 60 seconds forfeit."
-                  : "Custom match · no token entry fee."}{" "}
-                Menu controls do not pause opponents. Reloading loses your seat.
+                  ? "Online PvP · 1 vs 1. Disconnects longer than 60 seconds forfeit."
+                  : "Custom match · friends and AI."}{" "}
+                Menu controls do not pause opponents.
               </p>
               {error && <p role="alert">{error}</p>}
             </>

@@ -12,7 +12,6 @@ This checklist tracks the current batch of user reports. Earlier features remain
 - [x] Player chooses any tetromino shape; no forced random piece; preview and server agree.
 - [x] Validate desktop and phone in Browser Testing; rebuilt and refreshed live preview.
 
-Still gated by earlier user instructions: paid 1 RF mainnet mode needs funded deployment and testing; vibeathon submission waits until the user is happy. Neither is enabled/submitted by this UI fix batch.
 
 Evidence and exact coverage: [VALIDATION.md](VALIDATION.md), final playtest-fixes section. All 42 logic tests, typecheck, SDK check and build pass; desktop/phone browser checks cover the current batch.
 
@@ -31,7 +30,7 @@ Evidence and exact coverage: [VALIDATION.md](VALIDATION.md), final playtest-fixe
 
 ## Shared battlefield and construction controls
 
-These rules supersede the earlier separate-sector, remote-research and deposit mechanics.
+These rules supersede the earlier separate-sector and remote-research mechanics.
 
 - [x] Four shared monoliths: Friend captures in 10 seconds; rival Friends/guards contest; holding all four uncontested for 60 seconds wins, with a visible countdown.
 - [x] Remove flying raids. Friend and guards fight on connected completed flooring, including neutral/enemy flooring. Clicking enemy units/buildings orders an attack.
@@ -103,6 +102,51 @@ This section supersedes earlier implementation notes: voluntary dismantling remo
 
 - [x] Touch-confirmed automatic evacuation before dismantling; separate authenticated request budgets; live practice matchmaking and full-viewport results.
 
-- [ ] Hosting for larger public concurrency: direct 16-seat transport test passes; development proxy rate-limits the public 16-seat test.
+- [ ] Measure larger public concurrency on the chosen cloud host; four-browser streaming is verified, higher sustained capacity is not.
 
 - [x] Live expired-seat test returns to the title menu and clears saved recovery data; fixed the banner button inheriting blocked pointer input.
+
+## Specialist playtest — controls and reconnects, 21 September
+
+- [x] Escape, opening the game menu, disconnects and match end cancel unsent commands. Rapid Friend orders retain only the latest destination behind the in-flight request. Commands already accepted by the server remain authoritative.
+- [x] Add pending/accepted/rejected map markers, current Friend task text, and visible-target reticles. Resolve attack targets by owner and ID; do not reveal hidden targets. Correct the energy tooltip to Shield/EMP.
+- [x] Clear recalled guards’ follow/hold orders when assigning them back to a workplace. Protect evacuation from reassignment or commands back onto the clearing building.
+- [x] End pursuit when a target dies, disappears or leaves vision; automatic combat resumes the interrupted job.
+- [x] Keep online simulation and disconnect expiry running when every tab is hidden. Resolve simultaneous expiry as a terminal draw.
+- [x] Separate leaving a room from hiding a tab: preserve backgrounded opponents’ matches/results, invalidate departed capabilities and migrate host control.
+- [x] Fit worker labels and controls on narrow screens; prevent vertical swipes from scrolling the worker drawer sideways.
+- [x] Combined browser regression and seven-minute public streaming stress passed: 230 buildings / 256 workers / 486 commands, zero game/page/HTTP errors.
+- [ ] Real Safari/device check on the owner’s MacBook, iPhone and iPad.
+- [x] Prepare single-server Docker/Caddy deployment for AWS or GCP, private snapshots and a hosted CI container recovery check. Real process restart/crash recovery passes; cloud provisioning is pending domain, region and budget.
+- [x] Replace four-times-per-second sync polling with an authenticated event stream. The latest long browser test exposed 512 requests/minute proxy limits even at four seats; earlier “no API errors” reports did not fully account for sync errors and are superseded by the fresh transport verification below.
+- [x] Four streaming connections delivered 7,069 updates with zero sync polling. Complete HTTP error accounting is now required by the harness.
+- [x] Hosted CI passed the production container build, nonroot runtime, private snapshot permissions and exact match recovery after restart. Four real HTTP streams also sustained 65 seconds with no polling.
+
+See [the specialist report](PLAYTEST-2026-09-21.md) and [source PR #1](https://github.com/b00ste/farfield/pull/1). Physical Safari/wallet handoff and dense desktop building-label polish remain open.
+
+## PWA installation and clearer HUD actions
+
+- [x] Title-menu Install game action, native prompts where supported, and iPhone/iPad/Safari instructions; hide the action in standalone mode.
+- [x] Manifest, normal/maskable icons, Apple touch icon, standalone launch and honest offline reconnect screen.
+- [x] Cache only public offline/icon assets; never cache wallet, RPC, match state or game streams. No forced match reload for service-worker updates.
+- [x] Handle denied browser storage without blocking startup; wallet UI uses page-only memory when persistence is unavailable.
+- [x] Use the same worker-group icon in the action dock and the free-worker combat toggle.
+- [x] Friend work action uses the appropriate hammer, swords, healing, mining, farming, energy or research icon.
+- [x] Remove clipped recruitment cost text from the compact strip; keep costs in Workers and accessible help.
+- [x] Move the camera hint above the ability controls.
+
+Implementation is complete. Candidate browser validation and production rollout are recorded in the next validation entry; physical iOS installation/wallet switching remains a device check.
+
+## Direct mobile wallet choices
+
+- [x] Replace the configured Rainbow entry with Zerion and add MetaMask directly in the themed first wallet screen. Keep Browser Wallet and WalletConnect fallbacks.
+- [x] Verify desktop QR generation and iPhone/iPad standalone mobile link generation for both wallets with real connectors/relay, without approving a wallet connection or signing.
+
+Physical app launch and authorization still require the owner's wallet/device. This adds a direct Zerion route without relying on the external WalletConnect search directory.
+
+## Free online play
+
+- Online PvP is the first title action, followed by Friends & AI and Join friends.
+- Free matchmaking is the active online option. The future-mode label is disabled.
+- Settings, matchmaking, help and results contain only current gameplay information.
+- Validated with desktop/tablet/phone browser menus and a two-session online match.

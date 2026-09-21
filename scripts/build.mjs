@@ -1,10 +1,33 @@
 import { buildGame } from "@rarefriends/friendsdk/build";
 import { build } from "esbuild";
-import { readFile, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { randomBytes } from "node:crypto";
+import { buildPwa } from "./build-pwa.mjs";
 const version = randomBytes(8).toString("hex");
 const output = "games/farfield/.friendsdk";
-await buildGame("games/farfield");
+const apiOrigin = process.env.PUBLIC_API_ORIGIN || "";
+if (apiOrigin) {
+  const url = new URL(apiOrigin);
+  if (
+    !["https:", "http:"].includes(url.protocol) ||
+    url.origin !== apiOrigin.replace(/\/$/, "")
+  )
+    throw new Error(
+      "PUBLIC_API_ORIGIN must be an http(s) origin without credentials, path, query or fragment.",
+    );
+}
+// The SDK exclusively owns its output directory. Stage its output separately
+// before adding our trusted host and PWA files, so repeat builds stay valid.
+const sdkOutput = await mkdtemp(join(tmpdir(), "farfield-sdk-"));
+try {
+  await buildGame("games/farfield", { outdir: sdkOutput });
+  await cp(sdkOutput, output, { recursive: true });
+} finally {
+  await rm(sdkOutput, { recursive: true, force: true });
+}
+await buildPwa(output, version);
 await build({
   entryPoints: ["host/index.tsx"],
   outfile: `${output}/runtime.js`,
@@ -19,6 +42,7 @@ await build({
   minify: true,
   define: {
     __FARFIELD_BUILD__: JSON.stringify(version),
+    __FARFIELD_API_ORIGIN__: JSON.stringify(apiOrigin.replace(/\/$/, "")),
     "process.env.NODE_ENV": '"production"',
     __WALLETCONNECT_PROJECT_ID__: JSON.stringify(
       process.env.WALLETCONNECT_PROJECT_ID ??

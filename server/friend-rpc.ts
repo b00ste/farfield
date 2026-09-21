@@ -100,6 +100,64 @@ export function validateFriendRpc(input: unknown): void {
   }
 }
 let pending = 0;
+const unavailable = "Friend service is temporarily unavailable. Retry shortly.";
+type RpcRequest = { id: string | number; method: string };
+const hex = (value: unknown): value is string =>
+  typeof value === "string" && /^0x[0-9a-f]*$/i.test(value);
+
+// Reconstruct replies instead of forwarding provider metadata, error text or URLs.
+function publicReply(input: unknown, payload: unknown) {
+  const requests = (Array.isArray(input) ? input : [input]) as RpcRequest[];
+  const replies = Array.isArray(input) ? payload : [payload];
+  if (!Array.isArray(replies) || replies.length !== requests.length)
+    throw new Error(unavailable);
+  const result = replies.map((reply: unknown) => {
+    if (!reply || typeof reply !== "object") throw new Error(unavailable);
+    const value = reply as Record<string, unknown>;
+    const request = requests.find((item) => item.id === value.id);
+    if (!request || value.jsonrpc !== "2.0") throw new Error(unavailable);
+    const base = { jsonrpc: "2.0", id: request.id };
+    if (value.error) {
+      const code = (value.error as { code?: unknown }).code;
+      return {
+        ...base,
+        error: {
+          code: Number.isSafeInteger(code) ? code : -32000,
+          message: "Friend RPC read failed. Retry shortly.",
+        },
+      };
+    }
+    if (request.method !== "eth_getLogs") {
+      if (!hex(value.result)) throw new Error(unavailable);
+      return { ...base, result: value.result };
+    }
+    if (!Array.isArray(value.result)) throw new Error(unavailable);
+    const logs = value.result.map((entry: unknown) => {
+      if (!entry || typeof entry !== "object") throw new Error(unavailable);
+      const log = entry as Record<string, unknown>;
+      if (!Array.isArray(log.topics) || !log.topics.every(hex))
+        throw new Error(unavailable);
+      const clean: Record<string, unknown> = { topics: log.topics };
+      for (const key of [
+        "address",
+        "data",
+        "blockNumber",
+        "blockHash",
+        "transactionHash",
+        "transactionIndex",
+        "logIndex",
+      ]) {
+        if (!hex(log[key]) && log[key] !== null) throw new Error(unavailable);
+        clean[key] = log[key];
+      }
+      if (typeof log.removed !== "boolean") throw new Error(unavailable);
+      clean.removed = log.removed;
+      return clean;
+    });
+    return { ...base, result: logs };
+  });
+  return Array.isArray(input) ? result : result[0];
+}
 export async function forwardFriendRpc(body: unknown) {
   validateFriendRpc(body);
   if (pending >= 8) throw new Error("Friend service is busy. Retry shortly.");
@@ -109,15 +167,18 @@ export async function forwardFriendRpc(body: unknown) {
       process.env.FRIEND_RPC_URL || "https://rpc.mainnet.chain.robinhood.com",
       {
         method: "POST",
+        redirect: "error",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(12000),
       },
     );
-    if (!response.ok)
-      throw new Error("Friend service is temporarily unavailable.");
+    if (!response.ok) throw new Error(unavailable);
     // Never forward upstream CORS headers or cache identity reads.
-    return await response.json();
+    return publicReply(body, await response.json());
+  } catch {
+    // Fetch/JSON errors can contain the credential-bearing upstream URL.
+    throw new Error(unavailable);
   } finally {
     pending--;
   }

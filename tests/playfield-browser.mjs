@@ -294,9 +294,31 @@ try {
       .getByTestId("match-winner")
       .filter({ hasText: "no winner yet" })
       .waitFor();
-    assert.ok(await a.game.getByRole("region",{name:"Match result"}).evaluate(el=>{const r=el.getBoundingClientRect();return r.x===0&&r.y===0&&r.width===innerWidth&&r.height===innerHeight;}));
-    assert.equal(await a.game.getByRole("navigation",{name:"Game actions"}).isVisible(),false);
-    assert.equal(await a.game.getByRole("button",{name:"Game menu",exact:true}).isVisible(),false);
+    assert.ok(
+      await a.game
+        .getByRole("region", { name: "Match result" })
+        .evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          return (
+            r.x === 0 &&
+            r.y === 0 &&
+            r.width === innerWidth &&
+            r.height === innerHeight
+          );
+        }),
+    );
+    assert.equal(
+      await a.game
+        .getByRole("navigation", { name: "Game actions" })
+        .isVisible(),
+      false,
+    );
+    assert.equal(
+      await a.game
+        .getByRole("button", { name: "Game menu", exact: true })
+        .isVisible(),
+      false,
+    );
     await a.page.screenshot({ path: `artifacts/result-clear-${width}.png` });
     await a.game
       .getByRole("button", { name: "Main menu →", exact: true })
@@ -361,15 +383,17 @@ try {
       .getByRole("button", { name: "Main menu →", exact: true })
       .click();
   }
-  // Online practice pairs these clients automatically. RF entry stays disabled.
+  // Online matchmaking pairs these clients automatically. The future mode stays disabled.
   for (const c of [a, b]) {
     await c.page.getByRole("button", { name: /Online PvP/ }).click();
     assert.equal(
-      await c.page.getByRole("button", { name: /1 RF matches/ }).isDisabled(),
+      await c.page
+        .getByRole("button", { name: /Wagered · Coming soon/ })
+        .isDisabled(),
       true,
     );
     await c.page
-      .getByRole("button", { name: "Find practice match →", exact: true })
+      .getByRole("button", { name: "Find free match →", exact: true })
       .click();
   }
   await a.game.locator(".sector-status").waitFor();
@@ -388,8 +412,23 @@ try {
     .getByRole("button", { name: "Confirm forfeit", exact: true })
     .click();
   await b.game.getByRole("heading", { name: "Victory", exact: true }).waitFor();
-  assert.ok(await b.game.getByRole("region",{name:"Match result"}).evaluate(el=>{const r=el.getBoundingClientRect();return r.x===0&&r.y===0&&r.width===innerWidth&&r.height===innerHeight;}));
-  assert.equal(await b.game.getByRole("navigation",{name:"Game actions"}).isVisible(),false);
+  assert.ok(
+    await b.game
+      .getByRole("region", { name: "Match result" })
+      .evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return (
+          r.x === 0 &&
+          r.y === 0 &&
+          r.width === innerWidth &&
+          r.height === innerHeight
+        );
+      }),
+  );
+  assert.equal(
+    await b.game.getByRole("navigation", { name: "Game actions" }).isVisible(),
+    false,
+  );
   assert.deepEqual([...a.fixture.errors, ...b.fixture.errors, ...errors], []);
   console.log(
     "PASS mixed 5-seat custom match, automatic online pairing, no online pause, forfeit/winner propagation, RF deposits unavailable.",

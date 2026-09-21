@@ -1144,6 +1144,40 @@
 .worker-palette .crew-job {
   padding: 3px 0;
 }
+.worker-palette {
+  overflow-x: hidden;
+  touch-action: pan-y;
+}
+.worker-palette .crew-manager,
+.worker-palette .crew-job > div:first-child,
+.worker-palette .crew-recruit > div {
+  min-width: 0;
+}
+.worker-palette .crew-job > div:first-child {
+  flex: 1;
+}
+.worker-palette .crew-job small {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.worker-palette .crew-stepper {
+  flex-shrink: 0;
+}
+.worker-palette .crew-recruit,
+.worker-palette .guard-orders {
+  flex-wrap: wrap;
+}
+.worker-palette .crew-recruit > div {
+  flex: 1 1 100px;
+}
+.worker-palette .crew-recruit .primary {
+  min-width: 0;
+  flex: 1 1 130px;
+}
+.worker-palette .guard-orders button {
+  min-width: 0;
+  flex: 1 1 85px;
+}
 
 .touch-zoom-hint {
   display: none;
@@ -1494,4 +1528,16 @@
 .immersive-game[data-dock="left"] .action-dock,
 .immersive-game[data-dock="right"] .action-dock {
   height: 102px;
+}
+
+/* Keep camera help above the two-row ability/combat cluster. */
+.immersive-game .map-coordinates {
+  left: max(12px, env(safe-area-inset-left));
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 108px);
+  max-width: calc(100% - 24px);
+}
+@media (max-width: 1000px) {
+  .immersive-game[data-dock="bottom"] .map-coordinates {
+    bottom: calc(max(84px, calc(env(safe-area-inset-bottom) + 78px)) + 108px);
+  }
 }

@@ -1,0 +1,13 @@
+# Layer after compose.yaml for a separate API hostname.
+services:
+  farfield:
+    build:
+      args:
+        PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:?Set PUBLIC_API_ORIGIN to the HTTPS API origin}
+    environment:
+      FARFIELD_ALLOWED_ORIGINS: ${FARFIELD_ALLOWED_ORIGINS:?Set FARFIELD_ALLOWED_ORIGINS to the HTTPS game origin}
+  caddy:
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?Set API_DOMAIN to the API hostname}
+    volumes:
+      - ./Caddyfile.split:/etc/caddy/Caddyfile:ro
