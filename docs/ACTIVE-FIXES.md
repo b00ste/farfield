@@ -163,3 +163,5 @@ Validation: 104 automated tests, typecheck, FriendSDK check and production build
 
 - [ ] Optional scaled submission mode: Chromium touch pointer events hit the HUD, but synthesized clicks can land at incorrect coordinates. Map gestures pass; HUD validation used mouse input. Full-window mobile is the supported touch layout pending a fix.
 - [x] Approved economy pass: 0.13 food/s per living worker, serial six-second recruitment (five queued), reserved beds/jobs and refundable cancellations. Empty food gradually reduces worker/defense efficiency to 50%; farming and the Friend remain available for recovery. Queue persistence, AI priorities, timed shortage recovery and real tablet touch feedback verified.
+
+Released on `farfield.fun` as build `c3fad9100bb38e60` from `92b0818`; source PR #2 merged. Final CI passed 120 tests and production browser checks passed tablet economy/recovery and touch placement. The existing match and human seat survived deployment.

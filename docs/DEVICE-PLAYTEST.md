@@ -1,6 +1,6 @@
 # Real-device playtest
 
-Build under test: `e19f511263f52c83`, release `fb46a89` (21 September 2026). Use the public AWS [game](https://farfield.fun/) on each device; submission layout is available with `?submission=1`. Browser emulation has separate evidence and does not complete this checklist. The owner confirmed the production domain was added to Reown's allowlist.
+Build under test: `c3fad9100bb38e60`, release `92b0818` (21 September 2026). Use the public AWS [game](https://farfield.fun/) on each device; submission layout is available with `?submission=1`. Browser emulation has separate evidence and does not complete this checklist. The owner confirmed the production domain was added to Reown's allowlist.
 
 ## MacBook, iPhone and iPad
 
