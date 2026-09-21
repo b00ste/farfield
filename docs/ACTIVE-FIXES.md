@@ -167,3 +167,13 @@ Validation: 104 automated tests, typecheck, FriendSDK check and production build
 Released on `farfield.fun` as build `c3fad9100bb38e60` from `92b0818`; source PR #2 merged. Final CI passed 120 tests and production browser checks passed tablet economy/recovery and touch placement. The existing match and human seat survived deployment.
 
 - [x] Removed persistent drag/scroll/pinch instructions from the level; placement coordinates remain available. Released as build `f453b9e36be91061` from `5b58d76` (PR #3).
+
+## Mobile corners, shortcut hints and production staffing
+
+- [x] Landscape phone ability/camera controls sit at the bottom safe-area corners; side docks and selected-building actions remain inside the viewport without overlap. Narrow portrait bottom docks keep separate rows.
+- [x] Phone/tablet shortcut hints are hidden until trusted keyboard input outside text fields; touch/pen input hides them again. Help and tooltips follow the same state.
+- [x] Removed passive alloy/energy income. Unstaffed Foundries, Gardens and Reactors produce zero; on-site workers or the Friend must operate them. Core salvage requires the Friend actively working.
+
+Validation: 124 tests passed, including queued/walking/on-site labor, unassignment, dismantling and Friend-operation regressions. Browser Testing passed 15 viewport/dock combinations and keyboard/touch switching, including editable-field exclusion. Evidence: `artifacts/landscape-hud-candidate.json` and `artifacts/keyboard-hints-candidate.json`. Source PR #4 is merged; production release `63dddd4`, build `5d0dfa275f2b1845`.
+
+Public checks on the exact release passed: 932×430 landscape corners sit 12px above the bottom in emulation, selected-building controls fit without overlap, tablet key/touch/input behavior is correct, and a four-second idle interval produced zero alloy and energy. Zero page errors; test rooms were left. Evidence: `artifacts/landscape-hud-production.json` and `artifacts/keyboard-hints-production.json`. Physical Safari safe areas and hardware keyboard handoff remain on the device checklist.

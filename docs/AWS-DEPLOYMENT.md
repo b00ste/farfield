@@ -105,3 +105,11 @@ Public browser checks asserted this exact build and passed real-time tablet recr
 Release `5b58d76220f6f0c28c6ab7c1ec13bd6252e31215` (build `f453b9e36be91061`) removes persistent map navigation instructions. Both [push CI](https://github.com/b00ste/farfield/actions/runs/35621463438) and [PR CI](https://github.com/b00ste/farfield/actions/runs/35621512425) passed; source PR #3 is merged. Public HTTPS/API are healthy, both existing rooms and human seats were retained, the private RPC was preserved, and backup succeeded. No infrastructure or Phlox changes. Image: `sha256:774bade7eb8b2b87af74a275b0a6fa3256704ea17c61b89fbe767d7a036b0e7a`. Evidence: `artifacts/aws-release-5b58d762.json`.
 
 Focused public browser verification on this build confirmed the map hints are absent and zoom/center/arrow-key controls work, with zero page errors. The test room was left. Evidence: `artifacts/map-hints-production.json` and `.png`.
+
+## Mobile corners and production staffing
+
+Release `63dddd4d4c6c98a1d1d7bc629b465ef80c8574f8` (build `5d0dfa275f2b1845`) anchors landscape controls to safe-area corners, makes shortcut hints follow keyboard/touch input, and removes passive alloy/energy income. Source PR #4 is merged. Both [push CI](https://github.com/b00ste/farfield/actions/runs/35626229813) and [PR CI](https://github.com/b00ste/farfield/actions/runs/35626235392) passed, including 124 tests and process/container recovery.
+
+Image: `sha256:bfe5c84a6399f9d10af53353735c0360ab7fe5a0e48a2310f81a2b44d6f4c731`. HTTPS/API and containers are healthy; all three existing rooms and human seats were retained. The private RPC remained unchanged, runtime/snapshot permissions remain `0600`, and backup succeeded. No infrastructure or Phlox changes. Evidence: `artifacts/aws-release-63dddd4d.json`.
+
+Exact-build public browser checks passed landscape corner/context placement and tablet input-mode hints, with zero page errors. With the Friend explicitly idle and no workers, alloy and energy remained unchanged over four game seconds. Test rooms were left. Evidence: `artifacts/landscape-hud-production.json` and `artifacts/keyboard-hints-production.json`.
