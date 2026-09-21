@@ -121,4 +121,4 @@ This section supersedes earlier implementation notes: voluntary dismantling remo
 - [x] Prepare single-server Docker/Caddy deployment for AWS or GCP, private snapshots and a hosted CI container recovery check. Real process restart/crash recovery passes; cloud provisioning is pending domain, region and budget.
 - [x] Replace four-times-per-second sync polling with an authenticated event stream. The latest long browser test exposed 512 requests/minute proxy limits even at four seats; earlier “no API errors” reports did not fully account for sync errors and are superseded by the fresh transport verification below.
 - [ ] Complete fresh four-session streaming stress run, including every HTTP error in its result.
-- [ ] Run the prepared container image and recovery test on GitHub Actions.
+- [x] Hosted CI passed the production container build, nonroot runtime, private snapshot permissions and exact match recovery after restart. Four real HTTP streams also sustained 65 seconds with no polling.

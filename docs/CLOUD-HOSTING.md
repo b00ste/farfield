@@ -1,6 +1,6 @@
 # Farfield cloud hosting
 
-The prepared deployment runs one authoritative game server and a Caddy HTTPS proxy on a cloud VM. It is intended for an AWS Lightsail/EC2 instance or Google Compute Engine instance. No cloud resources have been provisioned, and no Docker engine was available in the development workspace to validate the image or Compose runtime.
+The prepared deployment runs one authoritative game server and a Caddy HTTPS proxy on a cloud VM. It is intended for an AWS Lightsail/EC2 instance or Google Compute Engine instance. No cloud resources have been provisioned. The production image, Compose configuration, nonroot runtime and container restart recovery passed [GitHub Actions run 35593772662](https://github.com/b00ste/farfield/actions/runs/35593772662). The public TLS/domain setup still needs validation on the chosen host.
 
 Start with one Linux VM near the first playtest group, a fixed public IP, and persistent SSD storage. A provisional 2-vCPU/4-GB allocation leaves room for building the image; measure actual CPU, memory, and tick latency before increasing player capacity. This is a sizing assumption, not a measured cloud capacity guarantee. Lightsail supports a [static IP](https://docs.aws.amazon.com/lightsail/latest/userguide/lightsail-create-static-ip.html) and [instance/disk snapshots](https://docs.aws.amazon.com/lightsail/latest/userguide/understanding-snapshots-in-amazon-lightsail.html). Compute Engine provides [persistent block storage](https://docs.cloud.google.com/compute/docs/disks/persistent-disks).
 
@@ -59,7 +59,7 @@ Create a private practice match, wait for its first snapshot, then restart only 
 
 Repeat the real four-browser playtest through the new HTTPS address, then test Safari on the owner’s MacBook, iPhone and iPad for wallet switching and tab backgrounding. The local/public-development test results do not establish the capacity or TLS configuration of this new VM.
 
-The prepared `.github/workflows/validate.yml` checks the Node build and then builds the container on a GitHub-hosted runner. `tests/container-smoke.mjs` starts a disposable image with a fresh anonymous volume, checks UID 1000 and private snapshot permissions, creates a practice station and worker through ordinary API commands, then stops/starts the container and verifies exact match recovery. It saves only sanitized assertions as a CI artifact. This is an HTTP/container test, not a browser, wallet, TLS, or cloud-capacity test. The script refuses to run outside GitHub Actions or the Infrastructure workspace. Do not recreate a Docker environment in the primary development workspace to run it.
+The `.github/workflows/validate.yml` checks the Node build and then builds the container on a GitHub-hosted runner. `tests/container-smoke.mjs` starts a disposable image with a fresh anonymous volume, checks UID 1000 and private snapshot permissions, creates a practice station and worker through ordinary API commands, then stops/starts the container and verifies exact match recovery. It saves only sanitized assertions as a CI artifact. This is an HTTP/container test, not a browser, wallet, TLS, or cloud-capacity test. The script refuses to run outside GitHub Actions or the Infrastructure workspace. Do not recreate a Docker environment in the primary development workspace to run it.
 
 ## Back up, restore, and update
 

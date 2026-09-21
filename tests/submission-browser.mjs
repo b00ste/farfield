@@ -175,9 +175,7 @@ try {
     data: { code },
   });
   await game
-    .getByText(
-      "This match expired or the server restarted. Return to the main menu to start again.",
-    )
+    .getByText("This match expired. Return to the main menu to start again.")
     .waitFor();
   await clickGame(game.getByRole("button", { name: "Main menu", exact: true }));
   await page.getByRole("button", { name: /Friends & AI/ }).waitFor();
