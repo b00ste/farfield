@@ -1,7 +1,8 @@
 import { connectorsForWallets, darkTheme } from "@rainbow-me/rainbowkit";
 import {
   injectedWallet,
-  rainbowWallet,
+  zerionWallet,
+  metaMaskWallet,
   walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import { createConfig, createStorage, http } from "wagmi";
@@ -27,7 +28,7 @@ const connectors = connectorsForWallets(
     {
       groupName: "Connect to Farfield",
       wallets: walletConnectProjectId
-        ? [injectedWallet, rainbowWallet, walletConnectWallet]
+        ? [injectedWallet, zerionWallet, metaMaskWallet, walletConnectWallet]
         : [injectedWallet],
     },
   ],
