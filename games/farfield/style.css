@@ -23,6 +23,7 @@ input {
   font: inherit;
 }
 button {
+  touch-action: manipulation;
   border: 1px solid #34444d;
   background: #1b2932;
   color: #dce6dd;
@@ -251,6 +252,8 @@ p {
   width: 100%;
   height: 100%;
   touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
   cursor: crosshair;
 }
 .sector-label {

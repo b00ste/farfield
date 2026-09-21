@@ -10,7 +10,7 @@ import {
   type Role,
   type State,
 } from "../games/farfield/engine.ts";
-import { routeTo, housing } from "../games/farfield/actors.ts";
+import { routeTo, housing, TASK_LABELS } from "../games/farfield/actors.ts";
 function advance(s: State, seconds: number) {
   for (let i = 0; i < seconds * 10; i++) tick(s, 0.1);
 }
@@ -68,6 +68,16 @@ test("Friend can operate every specialist building without hiring workers", () =
     assert.equal(workPower(s, role), 2);
     assert.equal(s.crew, 0);
   }
+});
+test("the Friend rests at an infirmary without counting as a medic", () => {
+  const s = started();
+  build(s, "infirmary");
+  advance(s, 5);
+  assert.equal(s.modules[1].progress, 1);
+  assert.equal(s.friend.task, "rest");
+  assert.equal(TASK_LABELS[s.friend.task], "Resting at infirmary");
+  assert.equal(workPower(s, "medics"), 0);
+  assert.equal(s.crew, 0);
 });
 test("helpers spawn at the core and only produce after walking to their own workplace", () => {
   const s = started();

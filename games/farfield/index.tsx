@@ -896,12 +896,23 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
           animation={watching ? null : animation}
           inspectedId={watching ? null : inspectedId}
           reduced={reduced}
-          placing={!!selected && !watching}
+          blueprint={
+            selected && !watching ? { type: selected, shape, rotation } : null
+          }
           disabled={
             halted || state.phase !== "playing" || state.paused || !!watching
           }
           onPreview={(p) => {
-            if (selected) setGhost({ type: selected, shape, rotation, ...p });
+            if (selected)
+              setGhost((previous) =>
+                previous?.type === selected &&
+                previous.shape === shape &&
+                previous.rotation === rotation &&
+                previous.x === p.x &&
+                previous.y === p.y
+                  ? previous
+                  : { type: selected, shape, rotation, ...p },
+              );
           }}
           onPick={(p) => {
             if (selected) {
@@ -1334,7 +1345,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
         {(selected || inspected) && !drawer && state.phase === "playing" && (
           <div
             className="context-command"
-            aria-label={`${MODULES[selected ?? inspected!.type].name} actions`}
+            aria-label={`${!selected && inspected!.wreck ? "Wreckage" : MODULES[selected ?? inspected!.type].name} actions`}
           >
             <div className="context-buttons">
               {selected ? (
@@ -1358,20 +1369,26 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                 </>
               ) : (
                 <>
-                  {inspected!.type !== "core" && !inspected!.wreck && (
+                  {inspected!.type !== "core" && (
                     <button
                       disabled={inspected!.dismantling || busy}
                       aria-label={
-                        inspected!.progress < 1
-                          ? "Cancel blueprint — 100% refund"
-                          : "Dismantle — 75% refund"
+                        inspected!.wreck
+                          ? "Clear wreckage — no refund"
+                          : inspected!.progress < 1
+                            ? "Cancel blueprint — 100% refund"
+                            : "Dismantle — 75% refund"
                       }
                       title={
-                        inspected!.progress < 1
-                          ? "Cancel blueprint — 100% refund"
-                          : inspected!.dismantling
-                            ? "Clearing units before dismantling"
-                            : "Dismantle building — 75% refund"
+                        inspected!.wreck
+                          ? inspected!.dismantling
+                            ? "Clearing units before removing wreckage"
+                            : "Clear wreckage — no refund"
+                          : inspected!.progress < 1
+                            ? "Cancel blueprint — 100% refund"
+                            : inspected!.dismantling
+                              ? "Clearing units before dismantling"
+                              : "Dismantle building — 75% refund"
                       }
                       onClick={() => {
                         void command({
@@ -1382,49 +1399,55 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                       }}
                     >
                       <ActionIcon kind="remove" />
-                      <small>{inspected!.progress < 1 ? "100%" : "75%"}</small>
+                      {!inspected!.wreck && (
+                        <small>
+                          {inspected!.progress < 1 ? "100%" : "75%"}
+                        </small>
+                      )}
                     </button>
                   )}
-                  <button
-                    disabled={halted || busy}
-                    onClick={() => {
-                      if (
-                        state.friend.targetId === inspected!.id &&
-                        state.friend.order === "work"
-                      ) {
-                        void command({ type: "stop-friend" });
-                        focusLevel();
-                      } else inspect(inspected!.id);
-                    }}
-                    aria-label={
-                      inspected!.progress < 1
-                        ? "Build with Friend"
-                        : "Work with Friend"
-                    }
-                    title={
-                      state.friend.targetId === inspected!.id &&
-                      state.friend.order === "work"
-                        ? "Stop Friend working here"
-                        : inspected!.progress < 1
+                  {!inspected!.wreck && (
+                    <button
+                      disabled={halted || busy}
+                      onClick={() => {
+                        if (
+                          state.friend.targetId === inspected!.id &&
+                          state.friend.order === "work"
+                        ) {
+                          void command({ type: "stop-friend" });
+                          focusLevel();
+                        } else inspect(inspected!.id);
+                      }}
+                      aria-label={
+                        inspected!.progress < 1
                           ? "Build with Friend"
                           : "Work with Friend"
-                    }
-                    aria-pressed={
-                      state.friend.targetId === inspected!.id &&
-                      state.friend.order === "work"
-                    }
-                  >
-                    <ActionIcon
-                      kind={
-                        inspected!.progress < 1
-                          ? "hammer"
-                          : WORK_ICONS[inspected!.type]
                       }
-                    />
-                    {inspected!.progress < 1 && (
-                      <small>{Math.floor(inspected!.progress * 100)}%</small>
-                    )}
-                  </button>
+                      title={
+                        state.friend.targetId === inspected!.id &&
+                        state.friend.order === "work"
+                          ? "Stop Friend working here"
+                          : inspected!.progress < 1
+                            ? "Build with Friend"
+                            : "Work with Friend"
+                      }
+                      aria-pressed={
+                        state.friend.targetId === inspected!.id &&
+                        state.friend.order === "work"
+                      }
+                    >
+                      <ActionIcon
+                        kind={
+                          inspected!.progress < 1
+                            ? "hammer"
+                            : WORK_ICONS[inspected!.type]
+                        }
+                      />
+                      {inspected!.progress < 1 && (
+                        <small>{Math.floor(inspected!.progress * 100)}%</small>
+                      )}
+                    </button>
+                  )}
                   {inspected!.type === "core" && (
                     <button
                       disabled={halted || busy || state.integrity >= 100}

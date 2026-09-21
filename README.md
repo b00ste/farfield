@@ -24,6 +24,7 @@ An internet connection is still required for wallets and matches. An offline lau
 | Action              | Control                                                                                                                          |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Build | **B / Build** → choose a block with **1–7** or **I/O/T/L/J/S/Z** → choose a building with **1–8** → click/tap once to place. Backspace returns to block selection; R rotates; Escape clears placement. |
+| Touch placement | The preview appears as soon as you choose a building. Drag any preview tile to position the whole piece; release to keep adjusting, then tap **Build**. Empty-space drags pan the camera; pinch zooms without placing. |
 | Cancel / dismantle | Click your blueprint or building. Cancel unfinished work for **100%** of alloy; dismantle completed buildings for **75%**. Dismantling removes the tiles. Your units walk clear automatically before removal; a bridge that would disconnect your station must be replaced with another route before removal. Dependent orphaned blueprints also cancel with a full refund. |
 | Work | Click an owned building. Your Friend walks there and operates it. |
 | Recruit | **W / Workers** → Recruit worker (6 alloy + 8 food), then job +/− controls. Guards can follow the Friend or defend their current position. |
@@ -55,7 +56,7 @@ Buildings cost **alloy only**. Energy powers Friend abilities.
 | Quarters | 14 | Four additional worker beds |
 | Defense | 16 | Staffed turret: 5-tile range, fixed 8 damage/second |
 | Research | 18 | +25% on-site decoding speed per science work power, capped at +100%; no remote captures |
-| Infirmary | 16 | Staffed medic heals allies within four tiles |
+| Infirmary | 16 | One medic: 8 HP/s; two: 16 HP/s within four tiles |
 
 | Ability | Control | Energy | Effect | Cooldown |
 | --- | --- | ---: | --- | --- |
@@ -64,9 +65,9 @@ Buildings cost **alloy only**. Energy powers Friend abilities.
 
 Failed or out-of-range casts cost nothing. Red projectiles are hostile; friendly fire is green/gold. Turret range rings show danger, blue rings and a timer mark disabled turrets, and the Friend's shield and HP are visible on the map. Research accelerates a Friend physically decoding a monolith; it does not grant combat damage or capture remotely.
 
-The Friend has 120 HP and deals 12 damage/second to units and 18 to selected buildings; workers have 60 HP and guards deal 7 damage/second within 2.2 tiles. Incoming unit damage resolves simultaneously. Enemy destruction pays no refund; destroyed buildings leave walkable wreckage. The core uses the displayed 100 hull as its health. Destroying it eliminates its commander. Core repairs cost 0.5 alloy/second per repair work power and restore 1.5 hull/second per power.
+The Friend has 120 HP and deals 12 damage/second to units and 18 to selected buildings; workers have 60 HP and guards deal 7 damage/second within 2.2 tiles. Incoming unit damage resolves simultaneously. Enemy destruction pays no refund; destroyed buildings leave walkable wreckage. Select your own wreckage to clear it without a refund, or rebuild over its exact empty footprint at the normal alloy cost. Clearance and rebuilding cannot disconnect completed station paths. The core uses the displayed 100 hull as its health. Destroying it eliminates its commander. Core repairs cost 0.5 alloy/second per repair work power and restore 1.5 hull/second per power.
 
-The core heals nearby units within three tiles; a staffed Infirmary heals within four. Healing restores 8 HP/second after four seconds without taking damage. A downed Friend respawns at their surviving core after 15 seconds. Lost workers must be replaced. Flying raids are disabled, including requests from old clients.
+The core heals nearby units within three tiles at 8 HP/second. An Infirmary needs living assigned medics working on site: one heals at 8 HP/second, two at 16 HP/second within four tiles; an empty Infirmary cannot heal, even with the Friend working there. Healing begins after four seconds without taking damage; overlapping healing points use the strongest rate rather than stacking. A downed Friend respawns at their surviving core after 15 seconds. Lost workers must be replaced. Flying raids are disabled, including requests from old clients.
 
 A living Friend within 2.5 tiles captures a monolith in **10 seconds**, reducible to five with staffed Research. Nearby rival Friends or guards contest it and pause capture. Ownership persists after leaving. Hold all four uncontested for **60 continuous seconds** to win; an enemy capture attempt or contest resets that countdown. The other victory condition is last core standing. Ownership, contests and the countdown are public. Full-screen results name the winner and cause.
 

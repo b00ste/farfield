@@ -12,7 +12,11 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { Rooms } from "../server/rooms.ts";
 import { RoomStore } from "../server/room-store.ts";
-import { createActor } from "../games/farfield/actors.ts";
+import {
+  createActor,
+  TASK_LABELS,
+  workPower,
+} from "../games/farfield/actors.ts";
 
 async function fixture(t: TestContext) {
   const directory = await mkdtemp(join(tmpdir(), "farfield-store-"));
@@ -102,6 +106,43 @@ test("rooms recover tokens, commands, fog, paused state and shared references wi
     recovered.access(restored.code, f.seat.token, 1_030_200).player.id,
     player.id,
   );
+});
+
+test("infirmary rest and medic assignments survive room recovery", async (t) => {
+  const f = await fixture(t);
+  const player = f.rooms.rooms.get(f.seat.code)!.players[0];
+  const cell = { x: player.state.spawn!.x + 2, y: player.state.spawn!.y };
+  player.state.modules.push({
+    id: 900,
+    type: "infirmary",
+    cells: [cell],
+    progress: 1,
+    owner: player.id,
+  });
+  Object.assign(player.state.friend, {
+    ...cell,
+    targetId: 900,
+    order: "work",
+    task: "rest",
+    working: true,
+  });
+  player.state.workers.push({
+    ...createActor(),
+    ...cell,
+    id: 901,
+    role: "medics",
+    targetId: 900,
+    order: "work",
+    task: "medics",
+    working: true,
+  });
+  await f.store.save(f.rooms.rooms);
+  const restored = (await f.store.load()).get(f.seat.code)!.players[0].state;
+  assert.equal(restored.friend.task, "rest");
+  assert.equal(TASK_LABELS[restored.friend.task], "Resting at infirmary");
+  assert.equal(restored.friend.targetId, 900);
+  assert.equal(restored.workers[0].targetId, 900);
+  assert.equal(workPower(restored, "medics", 900), 1);
 });
 
 test("restarted free online matches grant a fresh reconnect window", async (t) => {

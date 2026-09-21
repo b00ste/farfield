@@ -9,7 +9,7 @@ import {
   type CharacterAnimation,
 } from "./render.ts";
 import { visualPosition } from "./actors.ts";
-import type { State, Point } from "./engine.ts";
+import { placementError, rotated, type State, type Point } from "./engine.ts";
 export function StationMap({
   orderMarker,
   state,
@@ -21,7 +21,7 @@ export function StationMap({
   onMove,
   reduced,
   disabled,
-  placing,
+  blueprint,
   onPick,
   onPreview,
   onRotate,
@@ -39,12 +39,13 @@ export function StationMap({
   onMove: (dx: number, dy: number) => void;
   reduced: boolean;
   disabled: boolean;
-  placing: boolean;
+  blueprint: Pick<NonNullable<Ghost>, "type" | "shape" | "rotation"> | null;
   onPick: (p: Point) => void;
   onPreview: (p: Point) => void;
   onRotate: () => void;
   onPlace: () => void;
 }) {
+  const placing = !!blueprint;
   const canvas = useRef<HTMLCanvasElement>(null),
     camera = useRef<Camera>({
       x: state.spawn?.x ?? 0,
@@ -61,6 +62,7 @@ export function StationMap({
     inspectedId,
     orderMarker,
     placing,
+    onPreview,
   });
   latest.current = {
     state,
@@ -72,7 +74,65 @@ export function StationMap({
     inspectedId,
     orderMarker,
     placing,
+    onPreview,
   };
+  // Seed a visible preview without waiting for a hover event (touch has none).
+  useEffect(() => {
+    if (!blueprint || ghost || disabled) return;
+    const cells = rotated(blueprint.shape, blueprint.rotation);
+    const width = Math.max(...cells.map((p) => p.x)) + 1;
+    const height = Math.max(...cells.map((p) => p.y)) + 1;
+    const rect = canvas.current!.getBoundingClientRect();
+    const insetX = Math.min(24, rect.width / 8);
+    const insetY = Math.min(96, rect.height / 4);
+    // Keep the entire piece visible, including on a phone zoomed far in.
+    setCameraZoom(Math.min(
+      camera.current.zoom,
+      (rect.width - 2 * insetX) / (24 * (width + 1)),
+      (rect.height - 2 * insetY) / (24 * (height + 1)),
+    ));
+    const size = 24 * camera.current.zoom;
+    const minX = Math.ceil(camera.current.x - (rect.width / 2 - insetX) / size);
+    const maxX = Math.floor(camera.current.x + (rect.width / 2 - insetX) / size - width);
+    const minY = Math.ceil(camera.current.y - (rect.height / 2 - insetY) / size);
+    const maxY = Math.floor(camera.current.y + (rect.height / 2 - insetY) / size - height);
+    const center = {
+      x: Math.max(minX, Math.min(maxX, Math.floor(camera.current.x - width / 2))),
+      y: Math.max(minY, Math.min(maxY, Math.floor(camera.current.y - height / 2))),
+    };
+    const occupied = new Set(
+      [
+        ...latest.current.state.modules,
+        ...(latest.current.state.terrain ?? []),
+      ].flatMap((m) => m.cells.map((p) => `${p.x},${p.y}`)),
+    );
+    const candidates: Point[] = [];
+    for (let y = -4; y <= 4; y++)
+      for (let x = -4; x <= 4; x++) {
+        const p = { x: center.x + x, y: center.y + y };
+        if (p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY)
+          candidates.push(p);
+      }
+    candidates.sort(
+      (a, b) =>
+        Math.hypot(a.x - center.x, a.y - center.y) -
+        Math.hypot(b.x - center.x, b.y - center.y),
+    );
+    const position = candidates.find((p) => {
+      if (cells.some((c) => occupied.has(`${p.x + c.x},${p.y + c.y}`)))
+        return false;
+      const error = placementError(
+        latest.current.state,
+        blueprint.type,
+        blueprint.shape,
+        blueprint.rotation,
+        p.x,
+        p.y,
+      );
+      return !error || error === "Not enough alloy.";
+    });
+    latest.current.onPreview(position ?? center);
+  }, [placing, blueprint?.type, blueprint?.shape, blueprint?.rotation, ghost, disabled]);
   const lastSpawn = useRef("");
   useEffect(() => {
     if (!state.spawn) return;
@@ -95,6 +155,8 @@ export function StationMap({
     cy: number;
     distance: number;
     pointerId: number;
+    preview: Point | null;
+    tileSize: number;
   } | null>(null);
   const touches = useRef(new Map<number, Point>());
   const multiTouch = useRef(false);
@@ -203,8 +265,9 @@ export function StationMap({
     <div className="map-wrap">
       <canvas
         ref={canvas}
-        aria-label="Station map. Tap a building to move your Friend and work. Drag to pan; pinch to zoom. Use arrow keys to walk on completed station tiles. Build passages to shared monoliths and explore enemy bases. Select a blueprint, then click or tap to build. R rotates; Enter also builds."
+        aria-label="Station map. Tap a building to move your Friend and work. Drag to pan; pinch to zoom. Use arrow keys to walk on completed station tiles. Build passages to shared monoliths and explore enemy bases. Choose a building to preview it. Drag its preview to position it, then use Build. Tap elsewhere to build there. R rotates; Enter also builds."
         tabIndex={0}
+        onContextMenu={(e) => e.preventDefault()}
         onPointerDown={(e) => {
           if (e.button !== 0 || (!e.isPrimary && e.pointerType !== "touch"))
             return;
@@ -224,7 +287,23 @@ export function StationMap({
           e.preventDefault();
           e.currentTarget.focus({ preventScroll: true });
           e.currentTarget.setPointerCapture(e.pointerId);
+          const r = e.currentTarget.getBoundingClientRect();
+          const point = screenToWorld(
+            e.clientX - r.left,
+            e.clientY - r.top,
+            r.width,
+            r.height,
+            camera.current,
+          );
+          const grabPreview =
+            !disabled && placing && ghost &&
+            (e.pointerType === "touch" || e.pointerType === "pen") &&
+            rotated(ghost.shape, ghost.rotation).some(
+              (p) => ghost.x + p.x === point.x && ghost.y + p.y === point.y,
+            );
           drag.current = {
+            preview: grabPreview ? { x: ghost.x, y: ghost.y } : null,
+            tileSize: 24 * camera.current.zoom,
             x: e.clientX,
             y: e.clientY,
             cx: camera.current.x,
@@ -281,6 +360,14 @@ export function StationMap({
             d.distance,
             Math.hypot(e.clientX - d.x, e.clientY - d.y),
           );
+          if (d.preview) {
+            if (!disabled && placing && d.distance > 5)
+              onPreview({
+                x: d.preview.x + Math.round((e.clientX - d.x) / d.tileSize),
+                y: d.preview.y + Math.round((e.clientY - d.y) / d.tileSize),
+              });
+            return;
+          }
           if (d.distance > 5) {
             following.current = false;
             camera.current.x =
@@ -296,7 +383,21 @@ export function StationMap({
           const d = drag.current;
           if (!d || d.pointerId !== e.pointerId) return;
           drag.current = null;
-          if (disabled || d.distance > 5 || e.button !== 0) return;
+          d.distance = Math.max(d.distance, Math.hypot(e.clientX - d.x, e.clientY - d.y));
+          if (disabled || e.button !== 0) return;
+          if (d.distance > 5) {
+            if (d.preview && placing)
+              onPreview({
+                x: d.preview.x + Math.round((e.clientX - d.x) / d.tileSize),
+                y: d.preview.y + Math.round((e.clientY - d.y) / d.tileSize),
+              });
+            return;
+          }
+          if (d.preview) {
+            // A tap confirms the whole piece, even when grabbing a non-anchor tile.
+            onPlace();
+            return;
+          }
           const r = e.currentTarget.getBoundingClientRect();
           onPick(
             screenToWorld(

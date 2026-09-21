@@ -111,7 +111,7 @@ export const MODULES: Record<
     alloy: 16,
     energy: 0,
     description:
-      "Assign a medic to heal nearby allies out of combat. A forward retreat point.",
+      "Staff with 1 medic: 8 HP/s; 2 medics: 16 HP/s. Heals allies within 4 tiles after 4 seconds out of combat.",
     glyph: "✚",
   },
   lab: {
@@ -400,6 +400,56 @@ export function capacity(s: State, role: Role) {
     s.modules.filter((m) => m.type === type[role] && m.progress >= 1).length * 2
   );
 }
+const onModule = (module: Module, actor: Actor) =>
+  actor.hp > 0 &&
+  module.cells.some(
+    (p) => Math.abs(p.x - actor.x) < 1 && Math.abs(p.y - actor.y) < 1,
+  );
+function removalError(
+  s: State,
+  module: Module,
+  otherActors: Actor[],
+): string | null {
+  if (otherActors.some((a) => onModule(module, a)))
+    return "An enemy is on this building. Clear them before dismantling.";
+  const remaining = s.modules.filter((m) => m !== module && !m.dismantling);
+  const floor = new Set(
+    [...remaining, ...(s.terrain ?? [])]
+      .filter((m) => m.progress >= 1 && !m.dismantling)
+      .flatMap((m) => m.cells.map(key)),
+  );
+  const queue = [...(remaining.find((m) => m.type === "core")?.cells ?? [])];
+  const connected = new Set(queue.map(key));
+  for (let i = 0; i < queue.length; i++) {
+    const p = queue[i];
+    for (const n of [
+      { x: p.x + 1, y: p.y },
+      { x: p.x - 1, y: p.y },
+      { x: p.x, y: p.y + 1 },
+      { x: p.x, y: p.y - 1 },
+    ]) {
+      if (floor.has(key(n)) && !connected.has(key(n))) {
+        connected.add(key(n));
+        queue.push(n);
+      }
+    }
+  }
+  return remaining.some(
+    (m) => m.progress >= 1 && m.cells.some((p) => !connected.has(key(p))),
+  )
+    ? "This would disconnect your station. Build another path first."
+    : null;
+}
+function reclaimableWreck(s: State, cells: Point[]) {
+  const footprint = new Set(cells.map(key));
+  return s.modules.find(
+    (m) =>
+      m.wreck &&
+      !m.dismantling &&
+      m.cells.length === cells.length &&
+      m.cells.every((p) => footprint.has(key(p))),
+  );
+}
 export function placementError(
   s: State,
   type: BuildType,
@@ -407,6 +457,7 @@ export function placementError(
   rotation: number,
   x: number,
   y: number,
+  otherActors: Actor[] = [],
 ): string | null {
   if (
     !Number.isInteger(x) ||
@@ -440,16 +491,28 @@ export function placementError(
     )
   )
     return "Collect this resource deposit before building here.";
+  const reclaimed = reclaimableWreck(s, cells);
+  if (reclaimed) {
+    const error = removalError(s, reclaimed, otherActors);
+    if (error) return error;
+    if ([s.friend, ...s.workers].some((a) => onModule(reclaimed, a)))
+      return "Move units off wreckage before rebuilding, or clear it first.";
+  }
+  const availableModules = s.modules.filter((m) => m !== reclaimed);
   const occupied = new Set(
-    [...s.modules, ...(s.terrain ?? [])].flatMap((m) => m.cells.map(key)),
+    [...availableModules, ...(s.terrain ?? [])].flatMap((m) =>
+      m.cells.map(key),
+    ),
   );
   const connected = new Set(
-    s.modules.filter((m) => !m.dismantling).flatMap((m) => m.cells.map(key)),
+    availableModules
+      .filter((m) => !m.dismantling)
+      .flatMap((m) => m.cells.map(key)),
   );
   if (s.shared) {
     const floor = new Set(
       [
-        ...s.modules.filter((m) => !m.dismantling),
+        ...availableModules.filter((m) => !m.dismantling),
         ...(s.terrain ?? []).filter((m) => m.progress >= 1 && !m.dismantling),
       ].flatMap((m) => m.cells.map(key)),
     );
@@ -520,45 +583,12 @@ export function applyCommand(
   }
   if (c.type === "demolish") {
     const module = s.modules.find((m) => m.id === c.moduleId);
-    if (!module || module.type === "core" || module.wreck)
+    if (!module || module.type === "core")
       return "Choose your own building or blueprint.";
     if (module.progress >= 1) {
-      const onFloor = (a: Actor) =>
-        a.hp > 0 &&
-        module.cells.some(
-          (p) => Math.abs(p.x - a.x) < 1 && Math.abs(p.y - a.y) < 1,
-        );
-      if (otherActors.some(onFloor))
-        return "An enemy is on this building. Clear them before dismantling.";
-      const remaining = s.modules.filter((m) => m !== module && !m.dismantling);
-      const floor = new Set(
-        [...remaining, ...(s.terrain ?? [])]
-          .filter((m) => m.progress >= 1)
-          .flatMap((m) => m.cells.map(key)),
-      );
-      const queue = [
-        ...(remaining.find((m) => m.type === "core")?.cells ?? []),
-      ];
-      const connected = new Set(queue.map(key));
-      for (let i = 0; i < queue.length; i++) {
-        const p = queue[i];
-        for (const n of [
-          { x: p.x + 1, y: p.y },
-          { x: p.x - 1, y: p.y },
-          { x: p.x, y: p.y + 1 },
-          { x: p.x, y: p.y - 1 },
-        ])
-          if (floor.has(key(n)) && !connected.has(key(n))) {
-            connected.add(key(n));
-            queue.push(n);
-          }
-      }
-      if (
-        remaining.some(
-          (m) => m.progress >= 1 && m.cells.some((p) => !connected.has(key(p))),
-        )
-      )
-        return "This would disconnect your station. Build another path first.";
+      const error = removalError(s, module, otherActors);
+      if (error) return error;
+      const onFloor = (a: Actor) => onModule(module, a);
       const occupants = [s.friend, ...s.workers].filter(onFloor);
       if (occupants.length) {
         module.dismantling = true;
@@ -583,8 +613,10 @@ export function applyCommand(
       }
     }
     const refund = (m: Module) => {
-      s.alloy += MODULES[m.type].alloy * (m.progress < 1 ? 1 : 0.75);
-      s.energy += MODULES[m.type].energy * (m.progress < 1 ? 1 : 0.75);
+      if (!m.wreck) {
+        s.alloy += MODULES[m.type].alloy * (m.progress < 1 ? 1 : 0.75);
+        s.energy += MODULES[m.type].energy * (m.progress < 1 ? 1 : 0.75);
+      }
       for (const a of [s.friend, ...s.workers])
         if (a.targetId === m.id || a.resumeJob?.targetId === m.id)
           resetOrder(a, null, "idle");
@@ -635,13 +667,40 @@ export function applyCommand(
     assignedRoles(s);
     log(
       s,
-      "Refund returned · blueprints 100%, completed buildings 75%. Dismantled tiles removed.",
+      module.wreck
+        ? "Wreckage cleared. Combat losses have no refund."
+        : "Refund returned · blueprints 100%, completed buildings 75%. Dismantled tiles removed.",
     );
     return null;
   }
   if (c.type === "build") {
-    const error = placementError(s, c.room, c.shape, c.rotation, c.x, c.y);
+    const error = placementError(
+      s,
+      c.room,
+      c.shape,
+      c.rotation,
+      c.x,
+      c.y,
+      otherActors,
+    );
     if (error) return error;
+    const cells = rotated(c.shape, c.rotation).map((p) => ({
+      x: p.x + c.x,
+      y: p.y + c.y,
+    }));
+    const reclaimed = reclaimableWreck(s, cells);
+    if (reclaimed) {
+      s.modules = s.modules.filter((m) => m !== reclaimed);
+      for (const actor of [s.friend, ...s.workers]) {
+        if (
+          actor.targetId === reclaimed.id ||
+          actor.resumeJob?.targetId === reclaimed.id
+        )
+          resetOrder(actor, null, "idle");
+        actor.path = [];
+        actor.routeKey = "";
+      }
+    }
     const def = MODULES[c.room];
     s.alloy -= def.alloy;
     s.energy -= def.energy;
@@ -649,10 +708,7 @@ export function applyCommand(
     s.modules.push({
       id: s.nextId++,
       type: c.room,
-      cells: rotated(c.shape, c.rotation).map((p) => ({
-        x: p.x + c.x,
-        y: p.y + c.y,
-      })),
+      cells,
       progress: 0,
       owner,
       hp: 100,

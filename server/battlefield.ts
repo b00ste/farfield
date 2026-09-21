@@ -723,20 +723,42 @@ export function advanceBattlefield(room: Room, dt: number) {
         );
       }
     }
+    const core = s.modules.find((m) => m.type === "core");
+    // Only medics actually on duty power an infirmary; the Friend is a patient.
+    const infirmaries = new Map(
+      s.modules
+        .filter(
+          (m) =>
+            m.type === "infirmary" &&
+            m.progress >= 1 &&
+            !m.wreck &&
+            !m.dismantling,
+        )
+        .map((module) => [module.id, { module, staff: 0 }]),
+    );
+    for (const worker of s.workers) {
+      if (
+        worker.hp <= 0 ||
+        worker.role !== "medics" ||
+        !worker.working ||
+        worker.task !== "medics" ||
+        worker.fighting ||
+        worker.evacuating ||
+        worker.resumeJob
+      )
+        continue;
+      const station = infirmaries.get(worker.targetId!);
+      if (station?.module.cells.some((cell) => distance(cell, worker) < 0.01))
+        station.staff = Math.min(2, station.staff + 1);
+    }
     for (const a of [s.friend, ...s.workers]) {
       if (a.hp <= 0 || damage.has(a) || s.time - a.lastHit < 4) continue;
-      const core = s.modules.find((m) => m.type === "core");
-      const medics = s.modules.filter(
-        (m) =>
-          m.type === "infirmary" &&
-          m.progress >= 1 &&
-          workPower(s, "medics", m.id) > 0,
-      );
-      if (
-        core?.cells.some((t) => distance(t, a) <= 3) ||
-        medics.some((m) => m.cells.some((t) => distance(t, a) <= 4))
-      )
-        a.hp = Math.min(a.maxHp, a.hp + 8 * dt);
+      let healing = core?.cells.some((t) => distance(t, a) <= 3) ? 8 : 0;
+      for (const { module, staff } of infirmaries.values()) {
+        if (staff && module.cells.some((t) => distance(t, a) <= 4))
+          healing = Math.max(healing, 8 * staff);
+      }
+      a.hp = Math.min(a.maxHp, a.hp + healing * dt);
     }
   }
   for (const m of room.monoliths) {

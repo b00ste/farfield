@@ -10,6 +10,7 @@ export type Task =
   | "build"
   | "salvage"
   | "repair"
+  | "rest"
   | Exclude<Role, "builders">;
 export type Actor = Point & {
   evacuating?: boolean;
@@ -55,6 +56,7 @@ export const TASK_LABELS: Record<Task, string> = {
   "gather-food": "Collecting food",
   combat: "Fighting",
   medics: "Healing allies",
+  rest: "Resting at infirmary",
   idle: "Ready for your command",
   move: "Walking to work",
   build: "Constructing",
@@ -349,7 +351,9 @@ function step(
       ? "repair"
       : module.type === "core"
         ? "salvage"
-        : (JOBS[module.type] ?? "idle");
+        : actor === s.friend && module.type === "infirmary"
+          ? "rest"
+          : (JOBS[module.type] ?? "idle");
   actor.working = actor.task !== "idle";
 }
 export function updateActors(s: State, dt: number) {
