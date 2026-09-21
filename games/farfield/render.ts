@@ -211,10 +211,18 @@ export function render(
   const activeModules = new Set(
     s.workers.filter((a) => a.working && !a.fighting).map((a) => a.targetId),
   );
-  if (s.friend.working && !s.friend.fighting)
+  if (s.friend.working && !s.friend.fighting && s.friend.task !== "rest")
     activeModules.add(s.friend.targetId);
-  for (const mod of [...(s.terrain ?? []), ...s.modules]) {
-    if (!mod.cells.some((p) => onScreen(px(p.x), py(p.y), size * 6))) continue;
+  const visibleModules = [...(s.terrain ?? []), ...s.modules].filter((mod) =>
+    mod.cells.some((p) => onScreen(px(p.x), py(p.y), size * 6)),
+  );
+  // Draw every extrusion below every floor. Interleaving these per module
+  // lets a later building's shadow cover the top of an adjacent earlier one.
+  ctx.fillStyle = "#050b13";
+  for (const mod of visibleModules)
+    for (const p of mod.cells)
+      ctx.fillRect(px(p.x) + 3 * c.zoom, py(p.y) + 6 * c.zoom, size - 1, size - 1);
+  for (const mod of visibleModules) {
     const hostile =
       s.shared && mod.owner !== s.playerId && mod.owner !== "neutral";
     const targeted =
@@ -270,13 +278,6 @@ export function render(
 
     const def = MODULES[mod.type],
       pending = mod.progress < 1;
-    // Extruded edges make tetromino silhouettes legible without a costly 3D scene.
-    for (const p of mod.cells) {
-      const x = px(p.x),
-        y = py(p.y);
-      ctx.fillStyle = "#050b13";
-      ctx.fillRect(x + 3 * c.zoom, y + 6 * c.zoom, size - 1, size - 1);
-    }
     for (const p of mod.cells) {
       const x = px(p.x),
         y = py(p.y);

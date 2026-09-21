@@ -4,7 +4,12 @@ import { installFixture } from "./fixture.mjs";
 import { observeRoom } from "./room-observer.mjs";
 import { place } from "../server/arena.ts";
 import { routeTo } from "../games/farfield/actors.ts";
-import { housing, capacity, MODULES } from "../games/farfield/engine.ts";
+import {
+  housing,
+  capacity,
+  MODULES,
+  recruitmentError,
+} from "../games/farfield/engine.ts";
 import { writeFile, mkdir } from "node:fs/promises";
 import assert from "node:assert/strict";
 const origin =
@@ -149,6 +154,9 @@ async function connect(i) {
 function economy(s) {
   s.nextShape = 1;
   const pending = s.modules.filter((m) => m.progress < 1);
+  const queued = s.recruitQueue ?? [];
+  const roleTotal = (role) =>
+    s.roles[role] + queued.filter((entry) => entry.role === role).length;
   if (
     pending.length &&
     s.roles.builders === 0 &&
@@ -164,12 +172,13 @@ function economy(s) {
         ? place(s, t)
         : null;
   if (!built("foundry")) return build("foundry");
-  if (s.roles.miners < 1 && s.crew < housing(s) && s.alloy >= 6 && s.food >= 8)
+  if (roleTotal("miners") < 1 && !recruitmentError(s, "miners"))
     return { type: "recruit", role: "miners" };
   if (!built("garden")) return build("garden");
-  if (s.roles.farmers < 1 && s.crew < housing(s) && s.alloy >= 6 && s.food >= 8)
+  if (roleTotal("farmers") < 1 && !recruitmentError(s, "farmers"))
     return { type: "recruit", role: "farmers" };
-  if (s.crew >= housing(s) - 1 && s.crew < 64) return build("habitat");
+  if (s.crew + queued.length >= housing(s) - 1 && s.crew < 64)
+    return build("habitat");
   const targets = {
     farmers: Math.min(20, Math.ceil(s.crew * 0.35) + 1),
     miners: Math.min(24, Math.ceil(s.crew * 0.4) + 1),
@@ -188,11 +197,10 @@ function economy(s) {
     scientists: "lab",
   };
   for (const [role, n] of Object.entries(targets)) {
-    if (s.roles[role] >= n || s.crew >= 64) continue;
-    if (role !== "builders" && capacity(s, role) <= s.roles[role])
+    if (roleTotal(role) >= n || s.crew >= 64) continue;
+    if (role !== "builders" && capacity(s, role) <= roleTotal(role))
       return build(workplace[role]);
-    if (s.alloy >= 6 && s.food >= 8 && s.crew < housing(s))
-      return { type: "recruit", role };
+    if (!recruitmentError(s, role)) return { type: "recruit", role };
   }
   if (s.modules.length < 60 && pending.length < 2 && s.alloy > 25)
     return place(s, "passage");

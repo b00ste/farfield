@@ -1,3 +1,4 @@
+import { workerEfficiency } from "./economy.ts";
 import type { Module, Point, Role, State, RoomType } from "./engine.ts";
 export type Facing = "up" | "down" | "left" | "right";
 export type Task =
@@ -10,6 +11,7 @@ export type Task =
   | "build"
   | "salvage"
   | "repair"
+  | "rest"
   | Exclude<Role, "builders">;
 export type Actor = Point & {
   evacuating?: boolean;
@@ -55,6 +57,7 @@ export const TASK_LABELS: Record<Task, string> = {
   "gather-food": "Collecting food",
   combat: "Fighting",
   medics: "Healing allies",
+  rest: "Resting at infirmary",
   idle: "Ready for your command",
   move: "Walking to work",
   build: "Constructing",
@@ -230,7 +233,11 @@ export function workplace(
       s.workers.filter(
         (w) =>
           w.role === role && (w.resumeJob?.targetId ?? w.targetId) === m.id,
-      ).length < 2,
+      ).length +
+        (s.recruitQueue ?? []).filter(
+          (order) => order.role === role && order.moduleId === m.id,
+        ).length <
+        2,
   );
 }
 export function assignedRoles(s: State) {
@@ -240,11 +247,26 @@ export function assignedRoles(s: State) {
 }
 export function workPower(s: State, task: Task, moduleId?: number) {
   const atWork = (a: Actor) =>
+    a.hp > 0 &&
     a.working &&
     !a.fighting &&
     a.task === task &&
     (moduleId === undefined || a.targetId === moduleId);
-  return s.workers.filter(atWork).length + (atWork(s.friend) ? 2 : 0);
+  const efficiency =
+    task === "miners" || task === "build" ? workerEfficiency(s) : 1;
+  return (
+    s.workers.filter(atWork).length * efficiency + (atWork(s.friend) ? 2 : 0)
+  );
+}
+export function defenseEfficiency(s: State, moduleId: number) {
+  const friend = s.friend;
+  return friend.hp > 0 &&
+    friend.working &&
+    !friend.fighting &&
+    friend.task === "guards" &&
+    friend.targetId === moduleId
+    ? 1
+    : workerEfficiency(s);
 }
 function step(
   s: State,
@@ -349,7 +371,9 @@ function step(
       ? "repair"
       : module.type === "core"
         ? "salvage"
-        : (JOBS[module.type] ?? "idle");
+        : actor === s.friend && module.type === "infirmary"
+          ? "rest"
+          : (JOBS[module.type] ?? "idle");
   actor.working = actor.task !== "idle";
 }
 export function updateActors(s: State, dt: number) {

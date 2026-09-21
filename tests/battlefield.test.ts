@@ -161,6 +161,122 @@ test("healing requires an out-of-combat core or staffed infirmary; Friend respaw
   assert.equal(p.state.friend.hp, 120);
   assert.deepEqual({ x: p.state.friend.x, y: p.state.friend.y }, p.state.spawn);
 });
+test("an infirmary needs an assigned medic at its post; the Friend cannot power self-healing", () => {
+  const { room, p } = match();
+  const hospital: Module = {
+    id: 900,
+    type: "infirmary",
+    cells: [{ x: 10, y: 10 }],
+    progress: 1,
+    owner: p.id,
+  };
+  p.state.modules.push(hospital);
+  Object.assign(p.state.friend, {
+    x: 10,
+    y: 10,
+    hp: 20,
+    targetId: hospital.id,
+    task: "medics",
+    working: true,
+  });
+  wait(room, 1);
+  assert.equal(
+    p.state.friend.hp,
+    20,
+    "Friend working alone cannot activate an infirmary",
+  );
+  const medic = {
+    ...createActor(),
+    id: 901,
+    role: "medics" as const,
+    x: 9,
+    y: 10,
+    targetId: hospital.id,
+    task: "medics" as const,
+    working: true,
+  };
+  p.state.workers.push(medic);
+  wait(room, 1);
+  assert.equal(p.state.friend.hp, 20, "assigned medic must arrive at the post");
+  medic.x = 10;
+  medic.targetId = 999;
+  wait(room, 1);
+  assert.equal(
+    p.state.friend.hp,
+    20,
+    "a nearby worker assigned elsewhere cannot staff it",
+  );
+  medic.targetId = hospital.id;
+  medic.working = false;
+  wait(room, 1);
+  assert.equal(p.state.friend.hp, 20, "idle assigned worker does not heal");
+  medic.working = true;
+  medic.evacuating = true;
+  wait(room, 1);
+  assert.equal(p.state.friend.hp, 20, "evacuating workers do not heal");
+  medic.evacuating = false;
+  hospital.progress = 0.5;
+  wait(room, 1);
+  assert.equal(p.state.friend.hp, 20, "unfinished infirmary does not heal");
+  hospital.progress = 1;
+  hospital.dismantling = true;
+  wait(room, 1);
+  assert.equal(p.state.friend.hp, 20, "dismantling infirmary does not heal");
+  hospital.dismantling = false;
+  wait(room, 1);
+  assert.ok(
+    Math.abs(p.state.friend.hp - 28) < 1e-6,
+    "one working medic heals 8 HP/s",
+  );
+  medic.hp = 0;
+  wait(room, 1);
+  assert.ok(
+    Math.abs(p.state.friend.hp - 28) < 1e-6,
+    "healing stops when its medic dies",
+  );
+});
+test("a second medic doubles infirmary healing without stacking hospitals or exceeding maximum HP", () => {
+  const { room, p } = match();
+  Object.assign(p.state.friend, { x: 10, y: 10, hp: 20 });
+  for (const id of [900, 910]) {
+    p.state.modules.push({
+      id,
+      type: "infirmary",
+      cells: [{ x: id === 900 ? 10 : 11, y: 10 }],
+      progress: 1,
+      owner: p.id,
+    });
+  }
+  const medic = (id: number, targetId: number, x: number) => ({
+    ...createActor(),
+    id,
+    role: "medics" as const,
+    x,
+    y: 10,
+    targetId,
+    task: "medics" as const,
+    working: true,
+  });
+  p.state.workers.push(medic(901, 900, 10), medic(902, 900, 10));
+  wait(room, 1);
+  assert.ok(Math.abs(p.state.friend.hp - 36) < 1e-6, "two medics heal 16 HP/s");
+  p.state.workers.push(medic(911, 910, 11), medic(912, 910, 11));
+  wait(room, 1);
+  assert.ok(
+    Math.abs(p.state.friend.hp - 52) < 1e-6,
+    "overlapping infirmaries do not multiply healing",
+  );
+  p.state.friend.lastHit = p.state.time;
+  wait(room, 3);
+  assert.ok(
+    Math.abs(p.state.friend.hp - 52) < 1e-6,
+    "staffing does not bypass combat recovery delay",
+  );
+  p.state.friend.lastHit = -10;
+  p.state.friend.hp = p.state.friend.maxHp - 1;
+  wait(room, 1);
+  assert.equal(p.state.friend.hp, p.state.friend.maxHp);
+});
 test("Friend sieges buildings and core over connected paths; kills have no refund and retain flooring", () => {
   const { rooms, a, room, p, q } = match();
   const core = q.state.modules[0];
@@ -300,6 +416,7 @@ test("guards follow on flooring, hold a position, and can return to staff turret
     owner: p.id,
   });
   assert.equal(applyCommand(s, { type: "recruit", role: "guards" }), null);
+  for (let step = 0; step < 60; step++) tick(s, 0.1);
   assert.equal(
     rooms.command(a.code, a.token, { type: "guards", stance: "follow" }, 1000)
       .state.workers[0].stance,

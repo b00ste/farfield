@@ -1,7 +1,12 @@
 import { mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { createState, MODULES, ROLES } from "../games/farfield/engine.ts";
+import {
+  createState,
+  MODULES,
+  ROLES,
+  MAX_RECRUIT_QUEUE,
+} from "../games/farfield/engine.ts";
 import { createActor } from "../games/farfield/actors.ts";
 import { syncTerrain } from "./battlefield.ts";
 import type { Room } from "./rooms.ts";
@@ -174,6 +179,10 @@ function validateRoom(value: unknown): asserts value is Room {
       Object.values(p.seen).forEach(moduleValue);
     }
     const s = p.state;
+    if (object(s)) {
+      if (s.recruitQueue === undefined) s.recruitQueue = [];
+      if (s.foodShortage === undefined) s.foodShortage = 0;
+    }
     shape(s, { ...createState(), friend: {} }, "state");
     check(object(s), "state");
     check(
@@ -193,6 +202,30 @@ function validateRoom(value: unknown): asserts value is Room {
       point(shot.from);
       point(shot.to);
     });
+    check(
+      finite(s.foodShortage) && s.foodShortage >= 0 && s.foodShortage <= 1,
+      "food shortage",
+    );
+    array(s.recruitQueue, "recruitment queue");
+    check(
+      s.recruitQueue.length <= MAX_RECRUIT_QUEUE,
+      "recruitment queue capacity",
+    );
+    const recruitIds = new Set<number>();
+    for (const order of s.recruitQueue) {
+      check(
+        object(order) &&
+          Number.isSafeInteger(order.id) &&
+          !recruitIds.has(order.id as number) &&
+          ROLES.includes(order.role as never) &&
+          (order.moduleId === null || Number.isSafeInteger(order.moduleId)) &&
+          finite(order.progress) &&
+          order.progress >= 0 &&
+          order.progress <= 1,
+        "recruitment order",
+      );
+      recruitIds.add(order.id as number);
+    }
     actor(s.friend);
     array(s.workers, "workers");
     for (const worker of s.workers) {

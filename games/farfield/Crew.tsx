@@ -1,11 +1,15 @@
 import {
   ROLES,
   capacity,
+  rates,
+  recruitmentError,
+  RECRUIT_SECONDS,
+  WORKER_FOOD_UPKEEP,
   type State,
   type Role,
   type Command,
 } from "./engine.ts";
-import { housing, ROLE_NAMES } from "./actors.ts";
+import { ROLE_NAMES } from "./actors.ts";
 const jobs: Record<Role, string> = {
   builders: "Build queued modules",
   miners: "Alloy · Foundry",
@@ -24,13 +28,13 @@ export function Crew({
   busy: boolean;
   onCommand: (c: Command) => void;
 }) {
-  const beds = housing(state);
+  const queue = state.recruitQueue ?? [];
   const recruitHint =
-    state.crew >= beds
-      ? "Build Quarters for more beds"
-      : state.alloy < 6 || state.food < 8
-        ? "Needs 6 alloy + 8 food"
-        : "Starts as a builder";
+    recruitmentError(state, "builders") ??
+    "6 seconds each · starts as a builder";
+  const foodNet = rates(state).food;
+  const upkeep = state.crew * WORKER_FOOD_UPKEEP;
+  const foodIncome = foodNet + upkeep;
   return (
     <div className="crew-manager">
       <div className="crew-recruit">
@@ -40,13 +44,65 @@ export function Crew({
         </div>
         <button
           className="primary"
-          disabled={
-            busy || state.crew >= beds || state.alloy < 6 || state.food < 8
-          }
+          disabled={busy || !!recruitmentError(state, "builders")}
           onClick={() => onCommand({ type: "recruit", role: "builders" })}
         >
           + Recruit worker<small>6 alloy · 8 food</small>
         </button>
+      </div>
+      {queue.length > 0 && (
+        <div
+          className="recruit-queue"
+          aria-label="Recruitment queue"
+          data-testid="recruit-queue"
+        >
+          {queue.map((entry, index) => (
+            <div className="recruit-slot" key={entry.id}>
+              <span>{ROLE_NAMES[entry.role]}</span>
+              <small>
+                {index === 0
+                  ? entry.progress >= 1
+                    ? "Needs a bed"
+                    : `${Math.ceil((1 - entry.progress) * RECRUIT_SECONDS)}s`
+                  : "Queued"}
+              </small>
+              <progress
+                aria-label={`${ROLE_NAMES[entry.role]} recruitment progress`}
+                value={entry.progress}
+                max={1}
+              />
+              <button
+                aria-label={`Cancel recruit ${entry.id}`}
+                title="Cancel · refund 6 alloy + 8 food"
+                disabled={busy}
+                onClick={() =>
+                  onCommand({ type: "cancel-recruit", id: entry.id })
+                }
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="crew-economy" data-testid="crew-food-balance">
+        <span>
+          ♧ +{foodIncome.toFixed(2)}/s grown · −{upkeep.toFixed(2)}/s upkeep
+        </span>
+        <strong className={foodNet < 0 ? "danger" : ""}>
+          {foodNet >= 0 ? "+" : ""}
+          {foodNet.toFixed(2)}/s net
+        </strong>
+        <small>
+          One farmer feeds about six workers. Quarters add beds, not food.
+        </small>
+        {(state.foodShortage ?? 0) > 0 && (
+          <small className="danger">
+            Food shortage · workers and defenses at{" "}
+            {Math.round((1 - (state.foodShortage ?? 0) * 0.5) * 100)}%. Farms
+            keep producing.
+          </small>
+        )}
       </div>
       {!!state.roles.guards && (
         <div className="guard-orders">
@@ -80,11 +136,15 @@ export function Crew({
       <div className="crew-jobs">
         {ROLES.filter((role) => role !== "builders").map((role) => {
           const slots = capacity(state, role);
+          const pending = queue.filter((entry) => entry.role === role).length;
           return (
             <div className="crew-job" key={role}>
               <div>
                 <strong>{ROLE_NAMES[role]}</strong>
-                <small>{jobs[role]}</small>
+                <small>
+                  {jobs[role]}
+                  {pending ? ` · ${pending} queued` : ""}
+                </small>
               </div>
               <div className="crew-stepper">
                 <button
@@ -101,7 +161,9 @@ export function Crew({
                 <button
                   aria-label={`Assign ${ROLE_NAMES[role].toLowerCase()}`}
                   disabled={
-                    busy || !state.roles.builders || state.roles[role] >= slots
+                    busy ||
+                    !state.roles.builders ||
+                    state.roles[role] + pending >= slots
                   }
                   onClick={() => onCommand({ type: "assign", role, delta: 1 })}
                 >

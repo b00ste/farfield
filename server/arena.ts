@@ -6,6 +6,8 @@ import {
   capacity,
   housing,
   workPower,
+  recruitmentError,
+  WORKER_FOOD_UPKEEP,
   type State,
   type BuildType,
   type Role,
@@ -94,30 +96,53 @@ export function decide(bot: Rival, rivals: Rival[], _combatAt = 0) {
         Math.hypot(a.x - s.friend.x, a.y - s.friend.y) -
         Math.hypot(b.x - s.friend.x, b.y - s.friend.y),
     )[0];
+  const queued = s.recruitQueue ?? [];
+  const roleTotal = (role: Role) =>
+    s.roles[role] + queued.filter((entry) => entry.role === role).length;
+  const farmerTarget = Math.max(
+    1,
+    Math.ceil(((s.crew + queued.length + 1) * WORKER_FOOD_UPKEEP) / 0.8),
+  );
+  const garden = s.modules.find(
+    (m) => m.type === "garden" && m.progress >= 1 && !m.wreck && !m.dismantling,
+  );
+  // Fix the economy before expanding the army. Pending recruits reserve jobs too.
+  if (s.food < 16 && garden && roleTotal("farmers") < farmerTarget) {
+    if (s.roles.builders && s.roles.farmers < capacity(s, "farmers")) {
+      if (
+        applyCommand(
+          s,
+          { type: "assign", role: "farmers", delta: 1 },
+          bot.id,
+        ) === null
+      )
+        return;
+    }
+    if (s.food < 8) {
+      if (s.friend.targetId !== garden.id || s.friend.task !== "farmers")
+        applyCommand(s, { type: "direct", ...garden.cells[0] }, bot.id);
+      return;
+    }
+  }
+  if (s.friend.task === "farmers" && s.food < 24) return;
   const essential: BuildType[] = [
     "foundry",
-    "solar",
-    "habitat",
     "garden",
+    "habitat",
+    "solar",
     "turret",
   ];
   const missing = essential.find(
     (t) => !s.modules.some((m) => m.type === t && !m.wreck),
   );
   for (const [role, count] of [
+    ["farmers", farmerTarget],
     ["miners", 1],
     ["engineers", 1],
-    ["farmers", 1],
     ["builders", 1],
     ["guards", 2],
   ] as [Role, number][]) {
-    if (
-      s.roles[role] < count &&
-      (role === "builders" || capacity(s, role) > s.roles[role]) &&
-      s.crew < housing(s) &&
-      s.alloy >= 6 &&
-      s.food >= 8
-    ) {
+    if (roleTotal(role) < count && !recruitmentError(s, role)) {
       applyCommand(s, { type: "recruit", role }, bot.id);
       return;
     }
@@ -211,9 +236,12 @@ export function decide(bot: Rival, rivals: Rival[], _combatAt = 0) {
   }
   if (s.modules.some((m) => m.progress < 1)) return;
   const type: BuildType =
-    s.crew >= housing(s) && housing(s) < 10
-      ? "habitat"
-      : (missing ?? "passage");
+    capacity(s, "farmers") < farmerTarget &&
+    !s.modules.some((m) => m.type === "garden" && m.progress < 1)
+      ? "garden"
+      : s.crew + queued.length >= housing(s) && housing(s) < 10
+        ? "habitat"
+        : (missing ?? "passage");
   const command = place(s, type, objective);
   if (command) applyCommand(s, command, bot.id);
   else {

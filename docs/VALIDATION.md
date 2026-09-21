@@ -61,3 +61,13 @@ The latest candidate passes 94 logic/server tests, TypeScript, FriendSDK validat
 Run `node tests/free-menu-browser.mjs` and `npm run test:online` in Browser Testing against an isolated server. Sanitized evidence is in `artifacts/free-menu-candidate.json` and `artifacts/online-free-candidate.json`.
 
 The same checks passed against public build `e19f511263f52c83` after deployment of `fb46a89`: desktop/iPhone/iPad layouts, two-player online results and a scan of six served assets. Production reports are `free-menu-production.json`, `online-free-production.json` and `free-release-production.json` under ignored `artifacts/`. Both release CI workflows passed, including container recovery.
+
+## Touch construction and economy follow-up
+
+The touch construction candidate passed 104 automated checks before the economy pass. Real CDP input on iPad portrait/landscape, iPhone and 320px phone verifies immediate previews, dragging any preview tile with a preserved grab offset, no placement on drag release/cancel, blank-map panning, pinch handoff and pen input. Desktop single-click placement remains covered. A 64-tile adjacent-quarters render is pixel-identical when building order is reversed. Reproducible suites: `tests/touch-placement-browser.mjs` and `tests/dense-floor-browser.mjs`.
+
+The optional scaled submission iframe has a Chromium limitation: pointer events hit the HUD, but synthesized touch clicks can land at incorrect coordinates. Its map gestures passed, with mouse input used for HUD actions. Full-window mobile passed touch controls; physical Safari remains a device check.
+
+The subsequent economy benchmark (four commanders, 480 modules, 256 workers) measured 7.66ms mean and 11.86ms p95 for a server advance plus one filtered view. This is a synthetic server measurement, not a phone frame-rate claim.
+
+Economy checks cover serial recruitment, reserved beds/workplace slots, cancellation refunds, lost housing/workplaces, old-save migration, paused queues, shortage recovery and reduced worker/turret damage. Bundled process restart/crash checks preserve a queued recruit exactly once; container CI compares the paused queue as part of restored state. A real-time tablet browser run with normal resources verified five queued recruits, cancellation/requeue, reload to the same seat, serial arrivals, shortage warnings and Friend farming recovery (five workers consume 0.65 food/s; the Friend farming supplies 1.6/s, for +0.95/s net).

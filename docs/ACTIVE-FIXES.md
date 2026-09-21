@@ -150,3 +150,16 @@ Physical app launch and authorization still require the owner's wallet/device. T
 - Free matchmaking is the active online option. The future-mode label is disabled.
 - Settings, matchmaking, help and results contain only current gameplay information.
 - Validated with desktop/tablet/phone browser menus and a two-session online match.
+
+## iPad construction and recovery follow-up
+
+- [x] Preview appears immediately after selecting a building; touch/pen dragging preserves the grab offset and does not place on release.
+- [x] Preview remains visible at high zoom; empty-map panning, pinch, rotation and desktop clicks retain their controls.
+- [x] Infirmaries require on-site medics: one heals 8 HP/s, two 16 HP/s; the Friend cannot activate an empty infirmary.
+- [x] Own combat wreckage can be cleared without a refund or safely rebuilt, preserving occupied tiles and station connectivity.
+- [x] Dense station tiles remain on a single floor layer regardless of building order.
+
+Validation: 104 automated tests, typecheck, FriendSDK check and production build passed. Browser Testing verified full-window iPad portrait/landscape, iPhone, 320px phone and desktop controls. A 64-tile dense-floor fixture renders identically in reversed building order. Candidate evidence: `artifacts/touch-placement.json` and `artifacts/dense-floor-order.json`.
+
+- [ ] Optional scaled submission mode: Chromium touch pointer events hit the HUD, but synthesized clicks can land at incorrect coordinates. Map gestures pass; HUD validation used mouse input. Full-window mobile is the supported touch layout pending a fix.
+- [x] Approved economy pass: 0.13 food/s per living worker, serial six-second recruitment (five queued), reserved beds/jobs and refundable cancellations. Empty food gradually reduces worker/defense efficiency to 50%; farming and the Friend remain available for recovery. Queue persistence, AI priorities, timed shortage recovery and real tablet touch feedback verified.

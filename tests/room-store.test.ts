@@ -11,8 +11,13 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { Rooms } from "../server/rooms.ts";
+import { applyCommand, tick } from "../games/farfield/engine.ts";
 import { RoomStore } from "../server/room-store.ts";
-import { createActor } from "../games/farfield/actors.ts";
+import {
+  createActor,
+  TASK_LABELS,
+  workPower,
+} from "../games/farfield/actors.ts";
 
 async function fixture(t: TestContext) {
   const directory = await mkdtemp(join(tmpdir(), "farfield-store-"));
@@ -102,6 +107,85 @@ test("rooms recover tokens, commands, fog, paused state and shared references wi
     recovered.access(restored.code, f.seat.token, 1_030_200).player.id,
     player.id,
   );
+});
+
+test("infirmary rest and medic assignments survive room recovery", async (t) => {
+  const f = await fixture(t);
+  const player = f.rooms.rooms.get(f.seat.code)!.players[0];
+  const cell = { x: player.state.spawn!.x + 2, y: player.state.spawn!.y };
+  player.state.modules.push({
+    id: 900,
+    type: "infirmary",
+    cells: [cell],
+    progress: 1,
+    owner: player.id,
+  });
+  Object.assign(player.state.friend, {
+    ...cell,
+    targetId: 900,
+    order: "work",
+    task: "rest",
+    working: true,
+  });
+  player.state.workers.push({
+    ...createActor(),
+    ...cell,
+    id: 901,
+    role: "medics",
+    targetId: 900,
+    order: "work",
+    task: "medics",
+    working: true,
+  });
+  await f.store.save(f.rooms.rooms);
+  const restored = (await f.store.load()).get(f.seat.code)!.players[0].state;
+  assert.equal(restored.friend.task, "rest");
+  assert.equal(TASK_LABELS[restored.friend.task], "Resting at infirmary");
+  assert.equal(restored.friend.targetId, 900);
+  assert.equal(restored.workers[0].targetId, 900);
+  assert.equal(workPower(restored, "medics", 900), 1);
+});
+
+test("recruitment progress and shortage survive restart without charging twice or advancing downtime", async (t) => {
+  const f = await fixture(t);
+  const state = f.rooms.rooms.get(f.seat.code)!.players[0].state;
+  applyCommand(state, { type: "recruit", role: "builders" });
+  for (let i = 0; i < 30; i++) tick(state, 0.1);
+  state.foodShortage = 0.6;
+  const order = structuredClone(state.recruitQueue![0]),
+    alloy = state.alloy,
+    food = state.food;
+  await f.store.save(f.rooms.rooms);
+  f.setNow(1_030_000);
+  const restored = (await f.store.load()).get(f.seat.code)!.players[0].state;
+  assert.deepEqual(restored.recruitQueue, [order]);
+  assert.equal(restored.foodShortage, 0.6);
+  assert.equal(restored.alloy, alloy);
+  assert.equal(restored.food, food);
+  for (let i = 0; i < 30; i++) tick(restored, 0.1);
+  assert.equal(restored.workers.length, 1);
+  assert.equal(restored.workers[0].id, order.id);
+  assert.equal(restored.recruitQueue!.length, 0);
+});
+test("legacy snapshots initialize the economy fields and malformed queued orders are rejected", async (t) => {
+  const f = await fixture(t);
+  await f.store.save(f.rooms.rooms);
+  const snapshot = JSON.parse(await readFile(f.filename, "utf8"));
+  for (const player of snapshot.rooms[0].players) {
+    delete player.state.recruitQueue;
+    delete player.state.foodShortage;
+  }
+  await writeFile(f.filename, JSON.stringify(snapshot));
+  const restored = (await f.store.load()).get(f.seat.code)!;
+  for (const player of restored.players) {
+    assert.deepEqual(player.state.recruitQueue, []);
+    assert.equal(player.state.foodShortage, 0);
+  }
+  snapshot.rooms[0].players[0].state.recruitQueue = [
+    { id: 42, role: "builders", moduleId: null, progress: 2 },
+  ];
+  await writeFile(f.filename, JSON.stringify(snapshot));
+  await assert.rejects(f.store.load(), /recruitment order/);
 });
 
 test("restarted free online matches grant a fresh reconnect window", async (t) => {
