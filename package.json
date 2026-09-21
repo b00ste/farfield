@@ -18,6 +18,7 @@
     "test:wallet": "node tests/wallet-browser.mjs",
     "test:walletconnect": "node tests/walletconnect-smoke.mjs",
     "test:rpc": "node tests/rpc-browser.mjs",
+    "test:pwa": "node tests/pwa-browser.mjs",
     "test:arena": "node tests/arena-browser.mjs",
     "test:friend": "node tests/friend-browser.mjs",
     "test:playfield": "node tests/shared-battlefield-browser.mjs",

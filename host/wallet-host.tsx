@@ -26,6 +26,7 @@ import { parseChanceGame } from "@rarefriends/friendsdk/game";
 import { createGenerationSpriteReader } from "@rarefriends/friendsdk/sprites";
 import { TitleScene } from "./title-scene";
 import { MenuDialog } from "./menu-dialog";
+import { InstallGameButton } from "./pwa-install";
 import { CommanderScreen } from "./friend-cards";
 import definitionJson from "../games/farfield/game.json";
 import { robinhood, walletConfig, walletTheme } from "./wallet-config";
@@ -177,10 +178,14 @@ function WalletHost() {
     return () => window.removeEventListener("farfield-home", home);
   }, []);
   useEffect(() => {
-    localStorage.setItem(
-      "farfield-preferences",
-      JSON.stringify({ ...readPreferences(), muted, reduced }),
-    );
+    try {
+      localStorage.setItem(
+        "farfield-preferences",
+        JSON.stringify({ ...readPreferences(), muted, reduced }),
+      );
+    } catch {
+      // Private browsing or storage policy must not prevent opening the game.
+    }
   }, [muted, reduced]);
   const [selection, setSelection] = useState<{
     key: string;
@@ -499,6 +504,7 @@ function WalletHost() {
                       Change commander <span>05</span>
                     </button>
                   )}
+                  <InstallGameButton number={connected ? "06" : "05"} />
                 </nav>
               ) : (
                 <section className="landing-setup" aria-label="Match setup">

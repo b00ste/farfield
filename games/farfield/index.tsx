@@ -55,19 +55,31 @@ function ActionIcon({
     | "rotate"
     | "place"
     | "remove"
-    | "work"
+    | "hammer"
+    | "attack"
+    | "heal"
+    | "mine"
+    | "farm"
+    | "energy"
+    | "research"
     | "repair"
     | "recruit"
     | "close";
 }) {
+  if (kind === "workers")
+    return <UnitIcon group="workers" className="action-icon" />;
   const paths = {
     build: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 16h7m-3.5-3.5v7",
-    workers:
-      "M9 8a3 3 0 1 0 6 0 3 3 0 1 0-6 0M6 21v-4a6 6 0 0 1 12 0v4M3 10a2 2 0 1 0 0 4m18-4a2 2 0 1 1 0 4M2 21v-3m20 3v-3",
     rotate: "M19 9a8 8 0 1 0 1 7M19 3v6h-6",
     place: "m4 12 5 5L20 6",
     remove: "M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7",
-    work: "M5 6a3 3 0 1 0 6 0 3 3 0 1 0-6 0M3 21v-6a5 5 0 0 1 9-3M15 4l6 6m-4-4-5 5m0 6 6-6m-3 9 6-6",
+    hammer: "m14 3 7 7-3 3-7-7zM13 11 4 20l-2-2 9-9",
+    attack: "M3 3l5 1 12 12-4 4L4 8zM3 21l5-5m8-8 5-5M2 14l8 8m4-20 8 8",
+    heal: "M9 3h6v6h6v6h-6v6H9v-6H3V9h6z",
+    mine: "M3 5c6-3 12 0 17 6M5 4l5 6m-7 11L16 8",
+    farm: "M5 18C0 8 10 3 21 3c0 12-6 19-16 15zM3 21 16 8",
+    energy: "m14 2-9 12h6l-1 8 9-13h-6z",
+    research: "M9 3h6M10 3v7L4 20h16l-6-10V3M8 14h8",
     repair:
       "M15 4a5 5 0 0 0-6 6L3 16a3 3 0 0 0 5 4l6-6a5 5 0 0 0 6-6l-4 3-3-3 3-4Z",
     recruit:
@@ -89,6 +101,45 @@ function ActionIcon({
     </svg>
   );
 }
+function UnitIcon({
+  group,
+  className,
+}: {
+  group: "friend" | "workers";
+  className: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="16" cy="9" r="4" />
+      <path d="M10 26v-7a6 6 0 0 1 12 0v7M13 26v-7m6 7v-7" />
+      {group === "workers" && (
+        <>
+          <circle cx="5" cy="13" r="3" />
+          <circle cx="27" cy="13" r="3" />
+          <path d="M1 26v-5a4 4 0 0 1 7-3m23 8v-5a4 4 0 0 0-7-3" />
+        </>
+      )}
+    </svg>
+  );
+}
+const WORK_ICONS = {
+  core: "mine",
+  passage: "hammer",
+  solar: "energy",
+  garden: "farm",
+  foundry: "mine",
+  habitat: "hammer",
+  turret: "attack",
+  lab: "research",
+  infirmary: "heal",
+} as const;
 const clock = (s: number) =>
   `${Math.floor(s / 60)
     .toString()
@@ -1242,24 +1293,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                   focusLevel();
                 }}
               >
-                <svg
-                  viewBox="0 0 32 32"
-                  aria-hidden="true"
-                  className="mode-unit-icon"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <circle cx="16" cy="9" r="4" />
-                  <path d="M10 26v-7a6 6 0 0 1 12 0v7M13 26v-7m6 7v-7" />
-                  {group === "workers" && (
-                    <>
-                      <circle cx="5" cy="13" r="3" />
-                      <circle cx="27" cy="13" r="3" />
-                      <path d="M1 26v-5a4 4 0 0 1 7-3m23 8v-5a4 4 0 0 0-7-3" />
-                    </>
-                  )}
-                </svg>
+                <UnitIcon group={group} className="mode-unit-icon" />
                 <svg
                   className="mode-state-icon"
                   viewBox="0 0 20 20"
@@ -1399,7 +1433,13 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                       state.friend.order === "work"
                     }
                   >
-                    <ActionIcon kind="work" />
+                    <ActionIcon
+                      kind={
+                        inspected!.progress < 1
+                          ? "hammer"
+                          : WORK_ICONS[inspected!.type]
+                      }
+                    />
                     {inspected!.progress < 1 && (
                       <small>{Math.floor(inspected!.progress * 100)}%</small>
                     )}
@@ -1445,7 +1485,6 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
                         title={`Recruit ${ROLE_NAMES[inspectedRole ?? "builders"].toLowerCase()} — 6 alloy, 8 food`}
                       >
                         <ActionIcon kind="recruit" />
-                        <small>6 ⬡ · 8 ♧</small>
                       </button>
                     )}
                 </>

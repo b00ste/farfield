@@ -63,6 +63,7 @@ const mime: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".woff2": "font/woff2",
   ".json": "application/json",
+  ".webmanifest": "application/manifest+json",
 };
 const server = createServer(async (req, res) => {
   res.setHeader("X-Content-Type-Options", "nosniff");

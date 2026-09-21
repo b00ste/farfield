@@ -124,6 +124,31 @@ try {
   created = true;
   await publishedOrigin();
   await healthy();
+  const manifestResponse = await fetch(`${origin}/manifest.webmanifest`);
+  assert.equal(manifestResponse.status, 200);
+  assert.match(
+    manifestResponse.headers.get("content-type"),
+    /application\/manifest\+json/,
+  );
+  const manifest = await manifestResponse.json();
+  assert.equal(manifest.display, "standalone");
+  for (const icon of manifest.icons) {
+    const response = await fetch(`${origin}${icon.src}`);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "image/png");
+    const png = Buffer.from(await response.arrayBuffer());
+    assert.equal(png.subarray(1, 4).toString(), "PNG");
+    assert.equal(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`, icon.sizes);
+  }
+  const workerResponse = await fetch(`${origin}/service-worker.js`);
+  assert.equal(workerResponse.status, 200);
+  assert.match(workerResponse.headers.get("cache-control"), /no-store/);
+  assert.doesNotMatch(await workerResponse.text(), /__BUILD__/);
+  assert.equal((await fetch(`${origin}/offline.html`)).status, 200);
+  report.checks.push({
+    name: "Production image serves install manifest, sized PNG icons, offline page and uncached versioned worker",
+    passed: true,
+  });
   const preflight = await fetch(`${origin}/api/create`, {
     method: "OPTIONS",
     headers: {

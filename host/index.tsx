@@ -1,3 +1,5 @@
+import "./storage-fallback";
+import "./pwa-register";
 import { saveSeat, clearSeat } from "./session";
 import { apiUrl } from "./api";
 import { relayRoomStream } from "./room-stream";

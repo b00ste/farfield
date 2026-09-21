@@ -13,6 +13,12 @@ The game preloads its assets and opens a fixed, full-screen title menu with an a
 
 Custom matches are free. Start with your Friend, a command core, zero workers, 65 alloy, 45 energy and 40 food. A compact resource strip and two-button Build / Workers dock float above the full-screen map. Set **Menu → Controls position** to Bottom (default), Left or Right; this choice persists between matches. Build and worker drawers animate open without pausing play or resizing the map; the SDK preview toolbar is hidden during play, and wallet controls remain available in **Menu → Wallet & connection**.
 
+## Install on your phone or computer
+
+Choose **Install game** on the title screen. Chrome/Edge offer their native install prompt when available. On iPhone or iPad, use **Share → Add to Home Screen** (enable **Open as Web App** if shown). On macOS Safari, use **File → Add to Dock**. Launch from that icon for a standalone game window. The install option hides in the installed app.
+
+An internet connection is still required for wallets and matches. An offline launch shows a reconnect screen; it does not simulate a local match. Installation may use separate browser storage, so reconnect your wallet if prompted. Preferences can use local storage; restricted storage leaves the game usable without saving those preferences. Updates never force-reload an active match. See [PWA implementation and checks](docs/PWA.md).
+
 ## Controls
 
 | Action              | Control                                                                                                                          |

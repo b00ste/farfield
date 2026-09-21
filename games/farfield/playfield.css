@@ -1529,3 +1529,15 @@
 .immersive-game[data-dock="right"] .action-dock {
   height: 102px;
 }
+
+/* Keep camera help above the two-row ability/combat cluster. */
+.immersive-game .map-coordinates {
+  left: max(12px, env(safe-area-inset-left));
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 108px);
+  max-width: calc(100% - 24px);
+}
+@media (max-width: 1000px) {
+  .immersive-game[data-dock="bottom"] .map-coordinates {
+    bottom: calc(max(84px, calc(env(safe-area-inset-bottom) + 78px)) + 108px);
+  }
+}

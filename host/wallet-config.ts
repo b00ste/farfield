@@ -4,7 +4,7 @@ import {
   rainbowWallet,
   walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
-import { createConfig, http } from "wagmi";
+import { createConfig, createStorage, http } from "wagmi";
 import { defineChain } from "viem";
 import { apiUrl } from "./api";
 
@@ -34,6 +34,32 @@ const connectors = connectorsForWallets(
   { appName: "Farfield", projectId: walletConnectProjectId },
 );
 export const walletConfig = createConfig({
+  // Access can be denied by browser privacy settings, including the getter itself.
+  storage: createStorage({
+    storage: {
+      getItem(key) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch {
+          return null;
+        }
+      },
+      setItem(key, value) {
+        try {
+          window.localStorage.setItem(key, value);
+        } catch {
+          /* Session only. */
+        }
+      },
+      removeItem(key) {
+        try {
+          window.localStorage.removeItem(key);
+        } catch {
+          /* Session only. */
+        }
+      },
+    },
+  }),
   chains: [robinhood],
   connectors,
   multiInjectedProviderDiscovery: true,

@@ -29,7 +29,10 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run check
-      - run: npm run build
+      - name: Build and verify repeat builds preserve SDK output isolation
+        run: |
+          npm run build
+          npm run build
       - name: Verify process restart and crash recovery
         run: node tests/server-recovery.mjs
       - name: Verify sustained four-seat event streams

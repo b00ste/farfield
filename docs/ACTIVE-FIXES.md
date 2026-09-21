@@ -124,3 +124,16 @@ This section supersedes earlier implementation notes: voluntary dismantling remo
 - [x] Hosted CI passed the production container build, nonroot runtime, private snapshot permissions and exact match recovery after restart. Four real HTTP streams also sustained 65 seconds with no polling.
 
 See [the specialist report](PLAYTEST-2026-09-21.md) and [source PR #1](https://github.com/b00ste/farfield/pull/1). Physical Safari/wallet handoff and dense desktop building-label polish remain open.
+
+## PWA installation and clearer HUD actions
+
+- [x] Title-menu Install game action, native prompts where supported, and iPhone/iPad/Safari instructions; hide the action in standalone mode.
+- [x] Manifest, normal/maskable icons, Apple touch icon, standalone launch and honest offline reconnect screen.
+- [x] Cache only public offline/icon assets; never cache wallet, RPC, match state or game streams. No forced match reload for service-worker updates.
+- [x] Handle denied browser storage without blocking startup; wallet UI uses page-only memory when persistence is unavailable.
+- [x] Use the same worker-group icon in the action dock and the free-worker combat toggle.
+- [x] Friend work action uses the appropriate hammer, swords, healing, mining, farming, energy or research icon.
+- [x] Remove clipped recruitment cost text from the compact strip; keep costs in Workers and accessible help.
+- [x] Move the camera hint above the ability controls.
+
+Implementation is complete. Candidate browser validation and production rollout are recorded in the next validation entry; physical iOS installation/wallet switching remains a device check.
