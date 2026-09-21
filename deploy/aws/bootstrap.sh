@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-dnf install -y docker git awscli2
+dnf install -y docker git awscli-2 python3
 systemctl enable --now docker amazon-ssm-agent
 install -d -m 0755 /usr/local/lib/docker/cli-plugins /opt/farfield
 # Pinned upstream release and its published checksum; no unpinned install script.
