@@ -1,0 +1,58 @@
+name: farfield-staging
+
+services:
+  farfield:
+    image: farfield-staging:${FARFIELD_IMAGE_TAG:?Set an exact release SHA}
+    build:
+      context: ../../..
+      dockerfile: Dockerfile
+      args:
+        PUBLIC_API_ORIGIN: ""
+        WALLETCONNECT_PROJECT_ID: ${WALLETCONNECT_PROJECT_ID-1ef81bdbd6e8e9a585c2e94944ee1f6d}
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    env_file:
+      - path: /opt/farfield-staging/runtime.env
+        required: true
+        format: raw
+    environment:
+      NODE_ENV: production
+      PORT: "4173"
+      FARFIELD_STATE_PATH: /data/rooms.json
+      FARFIELD_ALLOWED_ORIGINS: https://preview.farfield.fun
+      FARFIELD_RANKED_ENABLED: "1"
+      FARFIELD_RANKINGS_PATH: /data/rankings.sqlite
+      FARFIELD_RANKED_ORIGIN: https://preview.farfield.fun
+    volumes:
+      - state:/data
+    expose:
+      - "4173"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.9.1
+    user: "65532:65532"
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    command:
+      [tunnel, --no-autoupdate, run, --token-file, /run/secrets/tunnel-token]
+    depends_on:
+      farfield:
+        condition: service_healthy
+    volumes:
+      - /opt/farfield-staging/tunnel-token:/run/secrets/tunnel-token:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  state:

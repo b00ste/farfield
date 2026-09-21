@@ -147,9 +147,9 @@ export class RoomStreams {
       stream.response.on("error", () => {});
     if (this.streams.get(stream.token) === stream) {
       this.streams.delete(stream.token);
-      const player = this.rooms.rooms
-        .get(stream.code)
-        ?.players.find((p) => p.token === stream.token);
+      const player = [...this.rooms.rooms.values()]
+        .flatMap((room) => room.players)
+        .find((p) => p.token === stream.token);
       if (player) player.active = false;
     }
     if (!this.streams.size && this.timer) {

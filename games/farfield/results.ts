@@ -1,6 +1,12 @@
 import type { RoomView } from "./network.ts";
 /** Result copy uses authoritative causes, never guesses from the last log line. */
 export function matchResult(room: RoomView) {
+  if (room.ranked?.cancelled)
+    return {
+      title: "Match cancelled",
+      winner: "No rating change",
+      reason: room.ranked.cancelled,
+    };
   if (room.draw)
     return {
       title: "Draw",

@@ -1,3 +1,4 @@
+import { useRanked, RankSummary, RankedLeaderboard } from "./ranked";
 import { readSeat } from "./session";
 import { apiUrl } from "./api";
 import { GameSelect } from "../games/farfield/GameSelect";
@@ -43,6 +44,8 @@ export const spriteReader = createGenerationSpriteReader(publicClient);
 // Read by the room relay so a wallet modal suspends that commander's game actions.
 export const walletUi = {
   blocked: false,
+  rankedToken: null as (() => string | null) | null,
+  invalidateRanked: null as (() => void) | null,
   account: null as string | null,
   chainId: null as number | null,
   friendId: null as string | null,
@@ -95,9 +98,11 @@ function WalletHost() {
       matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const [settings, setSettings] = useState(false);
-  const [menu, setMenu] = useState<"main" | "custom" | "online" | "join">(
+  const [menu, setMenu] = useState<"main" | "custom" | "online" | "join" | "leaderboard">(
     "main",
   );
+  const menuRef = useRef(menu);
+  menuRef.current = menu;
   useEffect(() => {
     let live = true;
     Promise.all(
@@ -169,6 +174,15 @@ function WalletHost() {
     selection?.key === identityKey
       ? (friends.find((f) => f.id === selection.id) ?? null)
       : null;
+  const rankedFriendId = friend ? String(friend.id) : friends[0] ? String(friends[0].id) : null;
+  const ranked = useRanked(identityKey, address, rankedFriendId);
+  walletUi.rankedToken = ranked.token;
+  walletUi.invalidateRanked = ranked.invalidate;
+  useEffect(() => {
+    const refresh = () => void ranked.refresh();
+    window.addEventListener("farfield-home", refresh);
+    return () => window.removeEventListener("farfield-home", refresh);
+  }, [identityKey, rankedFriendId]);
   walletUi.account = address ?? null;
   walletUi.chainId = chainId ?? null;
   walletUi.friendId = friend ? String(friend.id) : null;
@@ -374,7 +388,8 @@ function WalletHost() {
             </span>
             {connection}
           </header>
-          {!picker && (
+          {menu === "leaderboard" && !picker && ranked.config.data?.enabled && <RankedLeaderboard season={ranked.config.data.season} onBack={() => setMenu("online")} />}
+          {!picker && menu !== "leaderboard" && (
             <div className="landing-content">
               <div className="title-lockup">
                 <span aria-hidden="true">✦</span>
@@ -390,7 +405,7 @@ function WalletHost() {
                       setMenu("online");
                     }}
                   >
-                    Online PvP <span>01</span>
+                    Online PvP <span>{ranked.config.data?.enabled ? <RankSummary profile={ranked.profile} /> : "01"}</span>
                   </button>
                   <button
                     onClick={() => {
@@ -506,26 +521,35 @@ function WalletHost() {
                   )}
                   {menu === "online" && (
                     <div className="online-modes" aria-label="Online modes">
-                      <span className="current-online-mode">Free</span>
+                      <span className="current-online-mode">Free{ranked.config.data?.enabled ? ` · ${ranked.config.data.season}` : ""}</span>
                       <button disabled>Wagered · Coming soon</button>
                     </div>
                   )}
+                  {menu === "online" && ranked.config.data?.enabled && <div className="ranked-setup"><RankSummary profile={ranked.profile} /><button onClick={() => setMenu("leaderboard")}>Leaderboard ↗</button></div>}
+                  {menu === "online" && ranked.config.isError && <p role="alert">Online service unavailable. <button onClick={() => void ranked.config.refetch()}>Retry</button></p>}
+                  {menu === "online" && ranked.config.data?.enabled && !ranked.token() && <p>Verify your commander with a wallet signature.</p>}
+                  {menu === "online" && ranked.error && <p role="alert">{ranked.error}</p>}
                   <button
                     className="play-button"
                     disabled={
                       connected &&
-                      (playRequested ||
+                      (playRequested || ranked.busy || (menu === "online" && !ranked.config.data) ||
                         discovery.isFetching ||
                         !friends.length ||
                         (menu === "join" && code.length !== 10))
                     }
-                    onClick={() => {
+                    onClick={async () => {
                       if (!connected) {
                         if (status === "connected") openChainModal?.();
                         else openConnectModal?.();
                         return;
                       }
                       setAssetError("");
+                      if (menu === "online" && ranked.config.data?.enabled) {
+                        if (!rankedFriendId) return;
+                        if (!friend) setSelection({ key: identityKey, id: BigInt(rankedFriendId) });
+                        if (!(await ranked.authenticate(rankedFriendId)) || menuRef.current !== "online") return;
+                      }
                       setPlayRequested(true);
                     }}
                   >
@@ -533,10 +557,12 @@ function WalletHost() {
                       ? "Connect to play"
                       : discovery.isFetching
                         ? "Loading Friends…"
+                        : ranked.busy
+                          ? "Check your wallet…"
                         : playRequested
                           ? "Launching…"
                           : menu === "online"
-                            ? "Find free match →"
+                            ? ranked.config.data?.enabled && !ranked.token() ? "Sign in for ranked →" : "Find free match →"
                             : menu === "join"
                               ? "Join friends →"
                               : "Enter sector →"}

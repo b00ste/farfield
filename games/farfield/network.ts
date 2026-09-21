@@ -1,5 +1,8 @@
 import type { State, Command } from "./engine.ts";
+export type { RankProfile, RankResult } from "../../server/ranking.ts";
+import type { RankProfile, RankResult } from "../../server/ranking.ts";
 export type RoomView = {
+  ranked?: { season: string; profile: RankProfile; opponent: RankProfile | null; result: RankResult | null; cancelled?: string };
   draw?: boolean;
   revision: number;
   mode: "solo" | "pvp" | "custom" | "online";

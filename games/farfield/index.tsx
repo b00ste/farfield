@@ -1581,7 +1581,7 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
         >
           <div className="lobby-card">
             <div className="eyebrow">
-              {room?.winnerId ? "MATCH COMPLETE" : "STATION ELIMINATED"}
+              {room?.ranked?.cancelled ? "MATCH CANCELLED" : room?.winnerId || room?.draw ? "MATCH COMPLETE" : "STATION ELIMINATED"}
             </div>
             <h1>
               {room
@@ -1599,6 +1599,9 @@ function Mission({ friendId, client, paused }: GameComponentProps) {
             <p>
               {linked}/4 signals · {state.placed} modules · {clock(state.time)}
             </p>
+            {room?.ranked && <p data-testid="ranked-result">
+              {room.ranked.season} · {room.ranked.cancelled ? `Unrated · ${room.ranked.cancelled}` : room.ranked.result ? <>{room.ranked.result.division} · {Math.round(room.ranked.result.before.rating)} → {Math.round(room.ranked.result.after.rating)} RP ({room.ranked.result.delta >= 0 ? "+" : ""}{Math.round(room.ranked.result.delta)}) · {room.ranked.profile.label}</> : "Saving ranked result…"}
+            </p>}
             <button
               className="primary launch"
               onClick={() => void returnHome()}

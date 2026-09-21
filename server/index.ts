@@ -1,3 +1,5 @@
+import { RankingStore } from "./ranking.ts";
+import { RankedAuth } from "./ranked-auth.ts";
 import { RoomStore } from "./room-store.ts";
 import { RoomStreams } from "./events.ts";
 import { allowedOrigins, corsOrigin } from "./cors.ts";
@@ -8,14 +10,22 @@ import { resolve, extname, sep } from "node:path";
 import { Rooms } from "./rooms.ts";
 import { forwardFriendRpc } from "./friend-rpc.ts";
 import type { Command } from "../games/farfield/engine.ts";
-const rooms = new Rooms(),
-  root = resolve(process.env.GAME_ROOT || "games/farfield/.friendsdk");
+const root = resolve(process.env.GAME_ROOT || "games/farfield/.friendsdk");
+const rankedEnabled = process.env.FARFIELD_RANKED_ENABLED === "1";
+if (rankedEnabled && (!process.env.FARFIELD_RANKINGS_PATH || !process.env.FARFIELD_RANKED_ORIGIN || !process.env.FARFIELD_STATE_PATH))
+  throw new Error("Ranked requires durable rankings, room storage and an explicit sign-in origin.");
+if (rankedEnabled && resolve(process.env.FARFIELD_RANKINGS_PATH!) === resolve(process.env.FARFIELD_STATE_PATH!))
+  throw new Error("Ranked and room storage paths must differ.");
+const rankings = rankedEnabled ? new RankingStore(resolve(process.env.FARFIELD_RANKINGS_PATH!), { webRoot: root }) : undefined;
+const rankedAuth = rankedEnabled ? new RankedAuth(process.env.FARFIELD_RANKED_ORIGIN!) : undefined;
+const rooms = new Rooms(rankings);
 const origins = allowedOrigins(process.env.FARFIELD_ALLOWED_ORIGINS);
 const store = process.env.FARFIELD_STATE_PATH
   ? new RoomStore(resolve(process.env.FARFIELD_STATE_PATH), { webRoot: root })
   : null;
 if (store) {
   rooms.rooms = await store.load();
+  rooms.restoreRanked();
   // Fail startup if the configured durable path is not writable.
   await store.save(rooms.rooms);
 }
@@ -102,12 +112,32 @@ const server = createServer(async (req, res) => {
       let raw = "";
       for await (const chunk of req) {
         raw += chunk;
-        if (raw.length > (url.pathname === "/api/friend-rpc" ? 32768 : 2048))
+        if (raw.length > (url.pathname === "/api/friend-rpc" ? 32768 : url.pathname === "/api/ranked/verify" ? 16384 : 2048))
           throw new Error("Request too large.");
       }
       const body = JSON.parse(raw || "{}");
       if (!body || typeof body !== "object")
         throw new Error("Invalid request.");
+      if (url.pathname === "/api/ranked/config") {
+        res.end(JSON.stringify({ enabled: rankedEnabled, season: "Preseason" }));
+        return;
+      }
+      if (url.pathname.startsWith("/api/ranked/")) {
+        if (!rankings || !rankedAuth) throw new Error("Ranked Preseason is not enabled on this server.");
+        if (url.pathname === "/api/ranked/challenge") {
+          res.end(JSON.stringify(rankedAuth.challenge(body.address, body.friendId)));
+        } else if (url.pathname === "/api/ranked/verify") {
+          const session = await rankedAuth.verify(body.id, body.signature);
+          res.end(JSON.stringify({ token: session.token, expiresAt: session.expiresAt,
+            profile: rankings.profile(session.address, session.friendId) }));
+        } else if (url.pathname === "/api/ranked/profile") {
+          const session = rankedAuth.access(bearer);
+          res.end(JSON.stringify({ profile: rankings.profile(session.address) }));
+        } else if (url.pathname === "/api/ranked/leaderboard") {
+          res.end(JSON.stringify(rankings.leaderboard()));
+        } else res.writeHead(404).end(JSON.stringify({ error: "Unknown endpoint." }));
+        return;
+      }
       if (url.pathname === "/api/friend-rpc") {
         res.end(JSON.stringify(await forwardFriendRpc(body)));
         return;
@@ -124,7 +154,8 @@ const server = createServer(async (req, res) => {
         )
           throw new Error("Invalid Friend.");
         if (url.pathname === "/api/matchmake") {
-          res.end(JSON.stringify(rooms.matchmake(body.friendId)));
+          const identity = rankedAuth ? await rankedAuth.authorizeMatch(bearer, body.friendId) : undefined;
+          res.end(JSON.stringify(rooms.matchmake(body.friendId, Date.now(), identity?.address)));
           return;
         }
         if (url.pathname === "/api/create") {
@@ -235,6 +266,7 @@ const interval = setInterval(() => {
   rooms.advance((now - previous) / 1000, now);
   previous = now;
   limits.prune(now);
+  rankedAuth?.prune(now);
 }, 100);
 const port = Number(process.env.PORT || 4173);
 server.listen(port, "0.0.0.0", () =>
@@ -256,6 +288,7 @@ const shutdown = async () => {
     );
     await checkpointPending;
     if (store) await store.save(rooms.rooms);
+    rankings?.close();
     clearTimeout(deadline);
     process.exit(0);
   } catch {

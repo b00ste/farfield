@@ -87,3 +87,25 @@ test("own victory and online disconnect state are explicit", () => {
     "You were disconnected for more than 60 seconds.",
   );
 });
+
+test("ranked interruption takes precedence over draw and elimination causes", () => {
+  const { view } = match();
+  const current = view();
+  current.draw = true;
+  current.state.elimination = { reason: "forfeit" };
+  current.ranked = {
+    season: "Preseason",
+    profile: {
+      season: "Preseason", rating: 1200, deviation: 350, provisional: true,
+      division: "Unranked", label: "Placement 0/5",
+      placements: { completed: 0, required: 5 }, matches: 0,
+      wins: 0, losses: 0, draws: 0, friendId: "1", name: "Friend #1",
+    },
+    opponent: null, result: null,
+    cancelled: "Server interrupted this match. Your rating is unchanged.",
+  };
+  assert.deepEqual(matchResult(current), {
+    title: "Match cancelled", winner: "No rating change",
+    reason: "Server interrupted this match. Your rating is unchanged.",
+  });
+});

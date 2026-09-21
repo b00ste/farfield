@@ -1,3 +1,4 @@
+import type { RankingStore } from "./ranking.ts";
 import {
   positionPlayers,
   syncTerrain,
@@ -18,6 +19,8 @@ import {
 import { decide } from "./arena.ts";
 export type Mode = "solo" | "pvp" | "custom" | "online";
 export type Player = {
+  wallet?: string;
+  queueCode?: string;
   id: string;
   token: string;
   friendId: string;
@@ -34,6 +37,7 @@ export type Player = {
   seen?: Record<number, import("../games/farfield/engine.ts").Module>;
 };
 export type Room = {
+  ranked?: { matchId: string; queuedAt: number; cancelled?: string; settled?: boolean };
   draw?: boolean;
   monoliths?: import("../games/farfield/engine.ts").Monolith[];
   floor?: import("../games/farfield/engine.ts").Module[];
@@ -80,6 +84,8 @@ function player(
 }
 export class Rooms {
   rooms = new Map<string, Room>();
+  private rankings?: RankingStore;
+  constructor(rankings?: RankingStore) { this.rankings = rankings; }
   create(
     friendId: string,
     now = Date.now(),
@@ -149,7 +155,8 @@ export class Rooms {
     return { token: joined.token, ...this.view(room, joined.token, now) };
   }
   access(code: string, token: string, now = Date.now()) {
-    const room = this.rooms.get(code),
+    const room = this.rooms.get(code) ?? [...this.rooms.values()].find((candidate) =>
+      candidate.players.some((p) => p.queueCode === code && p.token === token)),
       current = room?.players.find(
         (p) => !p.bot && !p.departed && p.token === token && token.length > 0,
       );
@@ -173,6 +180,16 @@ export class Rooms {
     if (!own) throw new Error("This room session expired.");
     const state = visibleState(room, own);
     return {
+      ranked: room.ranked && this.rankings && own.wallet ? {
+        season: "Preseason" as const,
+        profile: this.rankings.profile(own.wallet),
+        opponent: (() => {
+          const rival = room.players.find((p) => p !== own && p.wallet);
+          return rival?.wallet ? this.rankings.profile(rival.wallet) : null;
+        })(),
+        result: this.rankings.getResult(room.ranked.matchId, own.wallet),
+        cancelled: room.ranked.cancelled,
+      } : undefined,
       code: room.code,
       revision: room.revision,
       isHost: room.host === token,
@@ -285,6 +302,7 @@ export class Rooms {
     return this.view(room, token, now);
   }
   advance(dt: number, now = Date.now()) {
+    this.pairRankedQueue(now);
     for (const room of this.rooms.values()) {
       // Visibility is a rendering hint, not permission to pause competitive
       // play. Keep online matches running throughout the reconnect window,
@@ -302,6 +320,10 @@ export class Rooms {
       )
         continue;
 
+      if (onlinePlaying && room.ranked && dt > 5) {
+        this.cancelRanked(room, "Server interruption. Rating unchanged.");
+        continue;
+      }
       if (onlinePlaying) {
         for (const p of room.players) {
           if (p.state.phase === "playing" && now - p.lastSeen > 60_000) {
@@ -340,6 +362,7 @@ export class Rooms {
     const alive = room.players.filter((p) => p.state.phase !== "lost");
     if (!alive.length && room.players.length) {
       room.draw = true;
+      this.recordRanked(room);
       return;
     }
     const winner =
@@ -349,6 +372,7 @@ export class Rooms {
         : undefined);
     if (winner) {
       room.winnerId = winner.id;
+      this.recordRanked(room);
       for (const p of room.players) {
         p.state.phase = p === winner ? "won" : "lost";
         p.state.log.unshift(
@@ -373,8 +397,32 @@ export class Rooms {
     room.players.push(bot);
     positionPlayers(room);
   }
-  matchmake(friendId: string, now = Date.now()) {
+  matchmake(friendId: string, now = Date.now(), wallet?: string) {
     this.clean(now);
+    if (this.rankings) {
+      if (!wallet) throw new Error("Verify your wallet before ranked matchmaking.");
+      const address = wallet.toLowerCase();
+      const existing = [...this.rooms.values()].find((r) => r.ranked && !r.draw && !r.winnerId &&
+        r.players.some((p) => p.wallet === address && !p.departed &&
+          (p.state.phase === "playing" || now - p.lastSeen < 8000)));
+      if (existing) {
+        const own = existing.players.find((p) => p.wallet === address)!;
+        if (own.friendId !== friendId) throw new Error("Finish or leave your existing ranked match first.");
+        own.lastSeen = now;
+        return { token: own.token, ...this.view(existing, own.token, now) };
+      }
+      // Expired waiting seats cannot trap an account in a second queue.
+      for (const [code, room] of this.rooms) if (room.ranked && room.players.length === 1 &&
+        room.players[0].wallet === address && room.players[0].state.phase === "ready") this.rooms.delete(code);
+      this.rankings.profile(address, friendId);
+      const created = this.create(friendId, now, "normal", "online");
+      const room = this.rooms.get(created.code)!;
+      room.players[0].wallet = address;
+      room.ranked = { matchId: randomBytes(16).toString("hex"), queuedAt: now };
+      this.pairRankedQueue(now);
+      const active = this.access(created.code, created.token, now).room;
+      return { token: created.token, ...this.view(active, created.token, now) };
+    }
     for (const room of this.rooms.values()) {
       if (
         room.mode !== "online" ||
@@ -395,6 +443,75 @@ export class Rooms {
     }
     return this.create(friendId, now, "normal", "online");
   }
+  private pairRankedQueue(now: number) {
+    if (!this.rankings) return;
+    const waiting = [...this.rooms.values()].filter((r) => r.ranked && !r.ranked.cancelled &&
+      r.players.length === 1 && !r.players[0].departed && r.players[0].state.phase === "ready" &&
+      now - r.players[0].lastSeen < 8000).sort((a, b) => a.ranked!.queuedAt - b.ranked!.queuedAt);
+    const paired = new Set<string>();
+    for (const room of waiting) {
+      if (paired.has(room.code)) continue;
+      const own = room.players[0];
+      const rating = this.rankings.profile(own.wallet!).rating;
+      const range = (r: Room) => Math.min(800, 150 + Math.floor(Math.max(0, now - r.ranked!.queuedAt) / 10000) * 50);
+      const rivalRoom = waiting.filter((r) => r !== room && !paired.has(r.code) &&
+        r.players[0].wallet !== own.wallet && r.players[0].friendId !== own.friendId &&
+        Math.abs(this.rankings!.profile(r.players[0].wallet!).rating - rating) <= Math.max(range(r), range(room)))
+        .sort((a, b) => Math.abs(this.rankings!.profile(a.players[0].wallet!).rating - rating) -
+          Math.abs(this.rankings!.profile(b.players[0].wallet!).rating - rating))[0];
+      if (!rivalRoom) continue;
+      paired.add(room.code); paired.add(rivalRoom.code);
+      const rival = rivalRoom.players[0];
+      rival.queueCode = rivalRoom.code;
+      rival.color = colors[1];
+      room.players.push(rival);
+      this.rooms.delete(rivalRoom.code);
+      positionPlayers(room);
+      for (const p of room.players) applyCommand(p.state, { type: "start" });
+      room.touched = now;
+      room.revision++;
+    }
+  }
+  private recordRanked(room: Room) {
+    if (!room.ranked || !this.rankings || room.ranked.cancelled || room.ranked.settled) return;
+    const [a, b] = room.players;
+    if (room.players.length !== 2 || !a.wallet || !b.wallet || a.bot || b.bot) return;
+    try {
+      this.rankings.record(room.ranked.matchId, a.wallet, b.wallet,
+        room.winnerId ? room.players.find((p) => p.id === room.winnerId)!.wallet! : null);
+      room.ranked.settled = true;
+    } catch {
+      // Persisting an authoritative result is mandatory. Never claim rating was saved.
+      room.ranked.cancelled = "Rating could not be saved. Rating unchanged; contact support.";
+      console.error("Ranked result storage failed.");
+    }
+  }
+  private cancelRanked(room: Room, reason: string) {
+    if (!room.ranked) return;
+    room.ranked.cancelled = reason;
+    room.draw = true;
+    room.winnerId = null;
+    for (const p of room.players) { p.state.phase = "lost"; p.state.paused = false; }
+    room.revision++;
+  }
+  /** Interrupted ranked games are void. Already-committed results survive stale snapshots. */
+  restoreRanked() {
+    for (const room of this.rooms.values()) {
+      if (!room.ranked || !this.rankings) continue;
+      const results = room.players.map((p) => p.wallet ? this.rankings!.getResult(room.ranked!.matchId, p.wallet) : null);
+      if (results.length === 2 && results.every(Boolean)) {
+        room.ranked.settled = true;
+        room.draw = results[0]!.outcome === "draw";
+        room.winnerId = null;
+        room.players.forEach((p, i) => {
+          p.state.phase = results[i]!.outcome === "win" ? "won" : "lost";
+          if (p.state.phase === "won") room.winnerId = p.id;
+        });
+      } else if (!room.ranked.cancelled && !room.ranked.settled) {
+        this.cancelRanked(room, "Server restarted. Match cancelled; rating unchanged.");
+      }
+    }
+  }
   leave(code: string, token: string, now = Date.now()) {
     const { room, player: current } = this.access(code, token, now);
     if (current.state.phase === "playing") {
@@ -410,7 +527,7 @@ export class Rooms {
     current.active = false;
     current.departed = true;
     if (!room.players.some((p) => !p.bot && !p.departed))
-      this.rooms.delete(code);
+      this.rooms.delete(room.code);
     room.revision++;
     return { left: true };
   }

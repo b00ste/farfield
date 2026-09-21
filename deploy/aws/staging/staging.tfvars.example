@@ -1,0 +1,4 @@
+region = "us-east-1"
+name = "farfield-staging"
+instance_type = "t3a.medium"
+vpc_cidr = "10.85.0.0/16"

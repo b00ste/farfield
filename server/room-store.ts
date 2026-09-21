@@ -144,6 +144,13 @@ function validateRoom(value: unknown): asserts value is Room {
     value.winnerId === null || typeof value.winnerId === "string",
     "winner",
   );
+  if (value.ranked !== undefined) {
+    check(object(value.ranked) && value.mode === "online", "ranked room");
+    check(typeof value.ranked.matchId === "string" && /^[a-f0-9]{32}$/.test(value.ranked.matchId), "ranked match ID");
+    check(finite(value.ranked.queuedAt), "ranked queue time");
+    if (value.ranked.cancelled !== undefined) check(typeof value.ranked.cancelled === "string", "ranked cancellation");
+    if (value.ranked.settled !== undefined) check(typeof value.ranked.settled === "boolean", "ranked settlement");
+  }
   array(value.players, "players");
   check(value.players.length > 0 && value.players.length <= 4, "player count");
   const ids = new Set<string>(),
@@ -169,6 +176,8 @@ function validateRoom(value: unknown): asserts value is Room {
       );
       tokens.add(p.token);
     }
+    if (value.ranked !== undefined) check(!p.bot && typeof p.wallet === "string" && /^0x[0-9a-f]{40}$/.test(p.wallet), "ranked wallet");
+    if (p.queueCode !== undefined) check(typeof p.queueCode === "string" && /^[A-F0-9]{10}$/.test(p.queueCode), "ranked queue alias");
     array(p.discovered, "discovered");
     check(
       p.discovered.every((id) => typeof id === "string"),

@@ -34,7 +34,9 @@
     "test:live": "node tests/live-four-player.mjs",
     "test:submission": "node tests/submission-browser.mjs",
     "test:online": "node tests/online-live.mjs",
-    "test:load": "node tests/live-http-load.mjs"
+    "test:load": "node tests/live-http-load.mjs",
+    "test:ranked-server": "node tests/ranked-server.mjs",
+    "test:ranked-browser": "node tests/ranked-host-browser.mjs"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.11",

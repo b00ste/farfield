@@ -35,6 +35,8 @@ jobs:
           npm run build
       - name: Verify process restart and crash recovery
         run: node tests/server-recovery.mjs
+      - name: Verify ranked authentication, settlement and restart cancellation
+        run: npm run test:ranked-server
       - name: Verify sustained four-seat event streams
         run: node tests/events-live.mjs
       - name: Validate Compose configuration

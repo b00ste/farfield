@@ -1066,3 +1066,13 @@ body {
 .online-modes button {
   min-height: 44px;
 }
+
+.rank-summary { font-size: clamp(11px, 1.1vw, 15px); color: #c2d7b5; letter-spacing: 0; }
+.ranked-setup { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.ranked-setup button { min-height: 44px; padding: 8px 12px; }
+.ranked-leaderboard { position: absolute; inset: 0; z-index: 3; background: #0b1923f5; padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); display: flex; flex-direction: column; min-width: 0; }
+.ranked-leaderboard header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.ranked-leaderboard button { min-height: 44px; padding: 8px 16px; }
+.ranked-standings { overflow: auto; min-height: 0; margin-top: 20px; }
+.ranked-standings table { width: 100%; border-collapse: collapse; text-align: left; font-size: clamp(11px, 1.3vw, 16px); }
+.ranked-standings th, .ranked-standings td { padding: 12px 6px; border-bottom: 1px solid #344a53; }
