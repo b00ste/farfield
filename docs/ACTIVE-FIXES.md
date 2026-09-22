@@ -205,3 +205,14 @@ Exact-build production verification passed the real-time blackout/recruitment re
 Source `a1d38d7` passed 170 tests, typecheck, FriendSDK checks, production image/container validation and HTTP ranked integration. The HTTP test uses real test-wallet signatures with fixture chain ownership; it does not establish live owned-wallet compatibility. Six browser viewport/configuration cases passed with host-auth fixtures. See [ranked rules and limitations](RANKED-PRESEASON.md) and [private hosting](../deploy/aws/staging/README.md). Public production remains on its existing unranked release.
 
 Private preview build `cfb300e35fbd6f21` passed real four-session custom play, Access gating, sandbox assets/streams and negative ranked-auth checks. Backup recovery passed in isolated scratch. See the [deployment and validation record](STAGING-DEPLOYMENT.md) for fixture boundaries and the outstanding real-wallet/device check.
+
+## Online PvP menu organization
+
+- [x] Equal-width Free/Preseason and disabled future-mode entries, aligned rank/leaderboard row, and one full-width play action.
+- [x] Show placement requirements until a real profile loads; do not imply a disconnected wallet has a 0/5 record.
+- [x] Show wallet-signature help only when connected and replace it with actionable error text after rejection.
+- [x] Keep decorative footer text out of the online menu on short landscape screens.
+
+Candidate validation: typecheck/build passed, 12 connected/disconnected desktop/tablet/phone layouts passed, and all six existing ranked sign-in/retry browser cases passed. A final 932×430 rejected-signature visual check confirmed clear controls and no footer overlap. Evidence: `artifacts/online-layout.json` and `artifacts/ranked-landscape-hint-check.json`.
+
+Deployed to private preview only as source `a7c46d4`, build `57d2ed168a7d2aa7`. Six live connected/disconnected desktop, phone and tablet menu checks passed with no page errors; wallet discovery used a fixture, with no signatures or matches created. Evidence: `artifacts/online-layout-preview.json` and `artifacts/aws-staging-release-a7c46d4.json`. Public production is unchanged.
