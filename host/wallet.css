@@ -602,6 +602,9 @@ body {
   }
 }
 @media (max-height: 550px) and (min-width: 651px) {
+  .online-landing .landing-footer {
+    display: none;
+  }
   .landing-header {
     top: 14px;
   }

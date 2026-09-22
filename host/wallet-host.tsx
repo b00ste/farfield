@@ -377,7 +377,7 @@ function WalletHost() {
         </div>
       ) : (
         <main
-          className="game-landing"
+          className={`game-landing${menu === "online" ? " online-landing" : ""}`}
           data-reduced={reduced}
           data-commander={picker}
         >
@@ -566,7 +566,7 @@ function WalletHost() {
                               ? "Join friends →"
                               : "Enter sector →"}
                   </button>
-                  {menu === "online" && connected && ranked.config.data?.enabled && !ranked.token() && <p className="online-signature-hint">Verify your commander with a wallet signature.</p>}
+                  {menu === "online" && connected && ranked.config.data?.enabled && !ranked.token() && !ranked.error && <p className="online-signature-hint">Verify your commander with a wallet signature.</p>}
                 </section>
               )}
               {menu === "main" && !connected && (
