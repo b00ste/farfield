@@ -1049,27 +1049,62 @@ body {
 
 .online-modes {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
   gap: 8px;
   font-size: 12px;
 }
-.current-online-mode {
+.current-online-mode,
+.game-landing .online-modes button {
   display: flex;
-  align-items: center;
-  padding: 12px 16px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 62px;
+  padding: 12px 14px;
+  text-align: left;
+  line-height: 1.3;
+  font-size: 12px;
+}
+.current-online-mode {
   border: 1px solid #c4dca2;
   border-radius: 3px;
   background: #30483c;
   color: #dfe9d3;
 }
-.online-modes button {
-  min-height: 44px;
+.online-modes strong {
+  font-size: 14px;
+}
+.online-modes > * > span {
+  font-size: 11px;
+}
+.online-setup .setup-heading {
+  margin-bottom: 18px;
+}
+.game-landing .online-setup > .play-button {
+  margin-top: 20px;
+}
+.online-setup .online-signature-hint {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .rank-summary { font-size: clamp(11px, 1.1vw, 15px); color: #c2d7b5; letter-spacing: 0; }
-.ranked-setup { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
-.ranked-setup button { min-height: 44px; padding: 8px 12px; }
+.ranked-setup { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-top: 18px; padding: 14px 0; border-top: 1px solid #344a53; border-bottom: 1px solid #344a53; }
+.ranked-status { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ranked-status-label { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #91aaa1; }
+.game-landing .ranked-setup button { flex-shrink: 0; min-height: 44px; padding: 8px 0 8px 10px; font-size: 12px; background: transparent; border-color: transparent; }
+.game-landing .ranked-setup button:hover { color: #e5f1ce; border-color: #617b70; }
+@media (max-height: 650px) {
+  .online-setup .setup-heading { margin-bottom: 12px; }
+  .ranked-setup { margin-top: 12px; padding: 8px 0; }
+  .game-landing .online-setup > .play-button { margin-top: 12px; }
+  .current-online-mode, .game-landing .online-modes button { min-height: 54px; padding: 8px 12px; gap: 3px; }
+}
 .ranked-leaderboard { position: absolute; inset: 0; z-index: 3; background: #0b1923f5; padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); display: flex; flex-direction: column; min-width: 0; }
 .ranked-leaderboard header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .ranked-leaderboard button { min-height: 44px; padding: 8px 16px; }

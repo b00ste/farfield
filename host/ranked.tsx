@@ -81,7 +81,7 @@ export function useRanked(identity: string, address: `0x${string}` | undefined, 
 }
 
 export function RankSummary({ profile }: { profile: RankProfile | null }) {
-  return <span className="rank-summary">{profile && !profile.provisional ? `${profile.division} · ${Math.round(profile.rating)} RP` : `Placements · ${profile?.placements.completed ?? 0}/5`}</span>;
+  return <span className="rank-summary">{!profile ? "Five placement matches" : !profile.provisional ? `${profile.division} · ${Math.round(profile.rating)} RP` : `Placements · ${profile.placements.completed}/${profile.placements.required}`}</span>;
 }
 
 export function RankedLeaderboard({ season, onBack }: { season: string; onBack: () => void }) {

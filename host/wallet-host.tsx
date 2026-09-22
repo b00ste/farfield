@@ -444,7 +444,7 @@ function WalletHost() {
                   <InstallGameButton number={connected ? "06" : "05"} />
                 </nav>
               ) : (
-                <section className="landing-setup" aria-label="Match setup">
+                <section className={`landing-setup${menu === "online" ? " online-setup" : ""}`} aria-label="Match setup">
                   <div className="setup-heading">
                     <button
                       className="menu-back"
@@ -521,13 +521,12 @@ function WalletHost() {
                   )}
                   {menu === "online" && (
                     <div className="online-modes" aria-label="Online modes">
-                      <span className="current-online-mode">Free{ranked.config.data?.enabled ? ` · ${ranked.config.data.season}` : ""}</span>
-                      <button disabled>Wagered · Coming soon</button>
+                      <span className="current-online-mode"><strong>Free</strong><span>{ranked.config.data?.enabled ? ranked.config.data.season : "Online 1v1"}</span></span>
+                      <button disabled aria-label="Wagered · Coming soon"><strong>Wagered</strong><span>Coming soon</span></button>
                     </div>
                   )}
-                  {menu === "online" && ranked.config.data?.enabled && <div className="ranked-setup"><RankSummary profile={ranked.profile} /><button onClick={() => setMenu("leaderboard")}>Leaderboard ↗</button></div>}
+                  {menu === "online" && ranked.config.data?.enabled && <div className="ranked-setup"><div className="ranked-status"><span className="ranked-status-label">Ranked 1v1</span><RankSummary profile={ranked.profile} /></div><button onClick={() => setMenu("leaderboard")}>Leaderboard ↗</button></div>}
                   {menu === "online" && ranked.config.isError && <p role="alert">Online service unavailable. <button onClick={() => void ranked.config.refetch()}>Retry</button></p>}
-                  {menu === "online" && ranked.config.data?.enabled && !ranked.token() && <p>Verify your commander with a wallet signature.</p>}
                   {menu === "online" && ranked.error && <p role="alert">{ranked.error}</p>}
                   <button
                     className="play-button"
@@ -567,6 +566,7 @@ function WalletHost() {
                               ? "Join friends →"
                               : "Enter sector →"}
                   </button>
+                  {menu === "online" && connected && ranked.config.data?.enabled && !ranked.token() && <p className="online-signature-hint">Verify your commander with a wallet signature.</p>}
                 </section>
               )}
               {menu === "main" && !connected && (
