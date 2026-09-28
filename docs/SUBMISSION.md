@@ -3,6 +3,8 @@
 - **Builder/contact:** [b00ste](https://github.com/b00ste)
 - **Category:** Character Spotlight / multiplayer strategy
 - **Source:** [b00ste/farfield](https://github.com/b00ste/farfield)
+- **Website:** [farfield.fun](https://farfield.fun)
+- **X:** [@farfielddotfun](https://x.com/farfielddotfun)
 - **Playable demo:** [Launch Farfield](https://farfield.fun/?submission=1)
 
 Your Rare Friend leads a tetromino space station: build paths, assign workers, fight rival commanders and contest four shared monoliths.

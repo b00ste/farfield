@@ -155,16 +155,23 @@ window.addEventListener("message", async (event) => {
         });
       return;
     }
+    // Authentication capabilities remain in the trusted host. The sandbox only
+    // receives the separate seat token after matchmaking succeeds.
+    const bearer = data.action === "matchmake" ? walletUi.rankedToken?.() : data.token;
+    if (data.action === "matchmake" && data.body.friendId !== walletUi.friendId)
+      throw new Error("Choose your Friend again before matchmaking.");
     const response = await fetch(apiUrl(`/api/${data.action}`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(data.token ? { Authorization: `Bearer ${data.token}` } : {}),
+        ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
       },
       body,
       signal: AbortSignal.timeout(8000),
     });
     const result = await response.json();
+    if (!response.ok && data.action === "matchmake" && bearer)
+      walletUi.invalidateRanked?.();
     // Discard responses to a frame replaced by an account/network/Friend change.
     if (
       document.querySelector<HTMLIFrameElement>(".rf-frame-viewport iframe")

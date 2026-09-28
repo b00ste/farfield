@@ -136,17 +136,24 @@ sudo docker compose --project-name farfield \
   -f /opt/farfield/current/deploy/compose.split.yaml logs --tail 100
 ```
 
-The server checkpoints free rooms every five seconds and on graceful shutdown.
+The production release enables ranked Preseason with the game hostname as the
+signature origin and a separate `/data/rankings.sqlite` ledger. The server
+checkpoints rooms every five seconds and on graceful shutdown. The backup job
+captures rooms first, then uses SQLite's online backup API for a consistent
+ranking copy without stopping matches. It validates both and uploads
+`backups/state-TIMESTAMP.tar.gz`; older `rooms-*.json` backups cannot restore rankings.
 Daily S3 backup is a disaster-recovery copy, **not high availability**. Backups
 contain private room access tokens: restrict access and never publish them.
 The instance role cannot list, read or delete backup objects; an operator identity
 needs those permissions to restore. S3 versioning is enabled; automatic deletion
 is not configured. Choose and explicitly approve a retention policy as usage grows.
 
-To restore, first stop the Farfield service and preserve its current room file.
-Download the chosen object using an authorized operator identity, validate the
-JSON, replace `rooms.json` in the Farfield room volume with mode `0600`, owner
-`1000:1000`, then start the service and verify reconnecting players. Never replace
+To restore, first stop the Farfield service and preserve its current state volume.
+Download and extract the chosen archive into private scratch using an authorized
+operator identity. Validate JSON and SQLite `PRAGMA integrity_check`, then restore
+both `rooms.json` and `rankings.sqlite` with mode `0600`, owner `1000:1000`.
+Preserve old journal/WAL/SHM files with the old database rather than combining
+them with the restored copy. Start the service and verify profiles and players. Never replace
 a running server's checkpoint. Use the same procedure on a replacement VM for
 host loss, then move DNS to its address.
 

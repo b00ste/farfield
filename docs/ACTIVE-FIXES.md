@@ -193,3 +193,34 @@ AI reactor staffing now scales with completed and queued buildings plus an abili
 Source PR #5 is merged. Both CI workflows passed for `2cb2fffe771f5396b1eb11f72561fecfa0710e1c`; application build `0c0d663825e6c55f` is deployed. Final candidate renderer evidence (`artifacts/power-feedback-candidate.json/.png`) uses an explicitly isolated browser fixture to verify resource effects stop during outages, the Friend reports the disabled workplace, and own turrets show POWER OFF while reactors remain active.
 
 Exact-build production verification passed the real-time blackout/recruitment recovery flow without state fixtures, confirmed no duplicate charge, and checked energy HUD, Workers and upkeep picker bounds at 932px landscape, 430px portrait and 1024px tablet. Zero page errors; the test room was left. Evidence: `artifacts/power-browser-production.json` and associated `power-*-production.png` screenshots.
+
+## Ranked Preseason — private preview
+
+- [x] Server-verified wallet sign-in and canonical Friend ownership; one rating per wallet across commanders.
+- [x] Five placements, Glicko ratings, divisions, a leaderboard and explicit result changes; custom/AI matches remain unranked.
+- [x] Automatically widening matchmaking, reconnect grace, atomic/idempotent results and no-rating cancellation after server restart or extended stall.
+- [x] Separate AWS server, network, IAM role, state and backups; preview app/API behind domain-restricted email access and an outbound tunnel.
+- [ ] Real approved-email sign-in and two eligible wallets completing a ranked match on physical devices.
+
+Source `a1d38d7` passed 170 tests, typecheck, FriendSDK checks, production image/container validation and HTTP ranked integration. The HTTP test uses real test-wallet signatures with fixture chain ownership; it does not establish live owned-wallet compatibility. Six browser viewport/configuration cases passed with host-auth fixtures. See [ranked rules and limitations](RANKED-PRESEASON.md) and [private hosting](../deploy/aws/staging/README.md). Public production remains on its existing unranked release.
+
+Private preview build `cfb300e35fbd6f21` passed real four-session custom play, Access gating, sandbox assets/streams and negative ranked-auth checks. Backup recovery passed in isolated scratch. See the [deployment and validation record](STAGING-DEPLOYMENT.md) for fixture boundaries and the outstanding real-wallet/device check.
+
+## Online PvP menu organization
+
+- [x] Equal-width Free/Preseason and disabled future-mode entries, aligned rank/leaderboard row, and one full-width play action.
+- [x] Show placement requirements until a real profile loads; do not imply a disconnected wallet has a 0/5 record.
+- [x] Show wallet-signature help only when connected and replace it with actionable error text after rejection.
+- [x] Keep decorative footer text out of the online menu on short landscape screens.
+
+Candidate validation: typecheck/build passed, 12 connected/disconnected desktop/tablet/phone layouts passed, and all six existing ranked sign-in/retry browser cases passed. A final 932×430 rejected-signature visual check confirmed clear controls and no footer overlap. Evidence: `artifacts/online-layout.json` and `artifacts/ranked-landscape-hint-check.json`.
+
+Deployed to private preview only as source `a7c46d4`, build `57d2ed168a7d2aa7`. Six live connected/disconnected desktop, phone and tablet menu checks passed with no page errors; wallet discovery used a fixture, with no signatures or matches created. Evidence: `artifacts/online-layout-preview.json` and `artifacts/aws-staging-release-a7c46d4.json`. Public production is unchanged.
+
+## Title leaderboard and rank filters
+
+- [x] Leaderboard available from the title menu without connecting a wallet; Back remembers the title or Online PvP entry point.
+- [x] Custom rank selector offers All ranks plus Bronze through Diamond, with loading, error/retry and rank-specific empty states.
+- [x] Server filters the full ranked population before limiting results, keeps global positions, rejects invalid ranks and follows displayed rounded-rating boundaries.
+
+Released to private preview as source `3661261`, build `94494df55d15226e`. All 173 tests, typecheck, build and HTTP integration passed. Candidate browser coverage passed 28 checks, including the seven-action title menu on a 320px phone. Live desktop/320px phone checks used the real API for every filter, Back navigation and invalid-filter rejection with zero page errors. Live standings were empty; nonempty global positions are verified by server tests and explicit browser fixtures. No wallet signatures or matches were created. Evidence: `artifacts/leaderboard-browser.json` and `artifacts/leaderboard-live.json`. Production remains unchanged.

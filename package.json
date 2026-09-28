@@ -10,10 +10,11 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "npm run build && node dist/server.mjs",
+    "preview:local": "node scripts/local-preview.mjs",
     "start": "node dist/server.mjs",
     "typecheck": "tsc --noEmit",
     "check": "friendsdk check games/farfield",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
     "test:browser": "node tests/submission-browser.mjs && node tests/touch-browser.mjs",
     "test:wallet": "node tests/wallet-browser.mjs",
     "test:walletconnect": "node tests/walletconnect-smoke.mjs",
@@ -34,7 +35,10 @@
     "test:live": "node tests/live-four-player.mjs",
     "test:submission": "node tests/submission-browser.mjs",
     "test:online": "node tests/online-live.mjs",
-    "test:load": "node tests/live-http-load.mjs"
+    "test:load": "node tests/live-http-load.mjs",
+    "test:ranked-server": "node tests/ranked-server.mjs",
+    "test:ranked-browser": "node tests/ranked-host-browser.mjs",
+    "test:leaderboard": "node tests/leaderboard-browser.mjs"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.11",

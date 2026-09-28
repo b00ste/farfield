@@ -154,6 +154,23 @@ Rooms expire after two inactive hours. Practice seat credentials remain in the s
 
 ## Backups, restore and upgrades
 
+For ranked servers, back up both rooms and the ranking ledger. From the repository
+root with the `ff` Compose helper configured, create a private full snapshot:
+
+```sh
+mkdir -p backups
+chmod 700 backups
+umask 077
+ff exec -T farfield node --input-type=module - < deploy/aws/snapshot.mjs > backups/state.tar.gz
+```
+
+This uses an online SQLite snapshot without stopping matches. To restore, stop
+the game, preserve its current volume, extract the archive into private scratch,
+validate the JSON and SQLite integrity, and restore both files with mode 0600 and
+UID/GID 1000. Preserve any old journal/WAL/SHM files with the old database. Restart
+and verify rankings and rooms. The rooms-only procedure below applies to unranked
+servers only. Do not overwrite an existing archive you want to retain.
+
 Define `ff` as above. Take a consistent backup during a scheduled interruption: stopping the server completes a final snapshot, and starting resumes the service.
 
 ```sh

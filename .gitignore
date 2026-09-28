@@ -16,3 +16,10 @@ deploy/aws/crash.log
 # Server-side room snapshots contain private seat capabilities.
 .farfield/
 backups/
+
+# Isolated staging infrastructure state and secrets
+deploy/aws/staging/.terraform/
+deploy/aws/staging/*.tfstate*
+deploy/aws/staging/*.tfplan
+deploy/aws/staging/*.tfvars
+deploy/aws/staging/crash.log
