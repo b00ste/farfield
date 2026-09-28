@@ -10,10 +10,11 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "npm run build && node dist/server.mjs",
+    "preview:local": "node scripts/local-preview.mjs",
     "start": "node dist/server.mjs",
     "typecheck": "tsc --noEmit",
     "check": "friendsdk check games/farfield",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
     "test:browser": "node tests/submission-browser.mjs && node tests/touch-browser.mjs",
     "test:wallet": "node tests/wallet-browser.mjs",
     "test:walletconnect": "node tests/walletconnect-smoke.mjs",

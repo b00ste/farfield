@@ -21,6 +21,9 @@ services:
       PORT: "4173"
       FARFIELD_STATE_PATH: /data/rooms.json
       FARFIELD_ALLOWED_ORIGINS: ${FARFIELD_ALLOWED_ORIGINS:-}
+      FARFIELD_RANKED_ENABLED: ${FARFIELD_RANKED_ENABLED:-0}
+      FARFIELD_RANKED_ORIGIN: ${FARFIELD_RANKED_ORIGIN:-}
+      FARFIELD_RANKINGS_PATH: /data/rankings.sqlite
     volumes:
       - rooms:/data
     expose:

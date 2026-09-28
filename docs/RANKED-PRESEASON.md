@@ -1,6 +1,6 @@
-# Ranked Preseason (private preview)
+# Ranked Preseason
 
-Ranking is off by default. The public game keeps its existing free matchmaking until this preview has been accepted. Only automatic online 1v1 matches affect ratings; custom matches and AI never do.
+The production AWS release enables free ranked matchmaking. Generic servers keep ranking off unless configured. Only automatic online 1v1 matches affect ratings; custom matches and AI never do. Production starts with its own ranking database; preview test records are not imported.
 
 ## Player experience
 
@@ -51,4 +51,4 @@ The first implementation assumes a single authoritative process. It does not add
 - `npm run test:ranked-browser`: Browser Testing workspace only; host signature UI fixtures, failure/retry, private token boundary and desktop/mobile layout. Fixtures never ship in the app.
 - Live preview: verify unauthenticated requests to both the app and `/api/*` are denied; sign in with an approved email; test two real eligible wallets, play to a result and re-open the leaderboard. Browser emulation cannot verify native mobile wallet switching.
 
-The preview hosting setup and exact access rules are in `deploy/aws/staging/README.md`.
+Future previews run locally using [the local preview guide](LOCAL-PREVIEW.md). The former AWS preview setup is retained only as a historical reference in `deploy/aws/staging/README.md`.

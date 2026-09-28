@@ -39,6 +39,8 @@ PUBLIC_API_ORIGIN=https://$api_domain
 FARFIELD_ALLOWED_ORIGINS=https://$game_domain
 FARFIELD_IMAGE_TAG=$commit
 FARFIELD_RUNTIME_ENV_FILE=$root/runtime.env
+FARFIELD_RANKED_ENABLED=1
+FARFIELD_RANKED_ORIGIN=https://$game_domain
 EOF
 compose=(docker compose --project-name farfield --env-file "$candidate_env" -f "$release/deploy/compose.yaml" -f "$release/deploy/compose.split.yaml")
 "${compose[@]}" config --quiet
@@ -97,7 +99,7 @@ EOF
 install -m 0755 "$release/deploy/aws/backup.sh" /usr/local/bin/farfield-backup
 cat > /etc/systemd/system/farfield-backup.service <<EOF
 [Unit]
-Description=Private Farfield room checkpoint backup
+Description=Private Farfield rooms and rankings backup
 After=farfield.service
 
 [Service]

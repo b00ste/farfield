@@ -85,7 +85,7 @@ Use the [self-hosting guide](docs/SELF-HOSTING.md) for local setup or a public D
 
 Farfield's production layout uses **farfield.fun** for the game and **api.farfield.fun** for the API. Both can run on one dedicated machine. Self-hosters can instead use a single domain. Run **one authoritative game-server process**; multiple replicas and automatic failover require match ownership/routing work.
 
-The experimental [ranked Preseason](docs/RANKED-PRESEASON.md) is disabled by default and tested separately from the public game. The [private AWS preview guide](deploy/aws/staging/README.md) covers an isolated server, persistent ratings, email access and backups.
+The free [ranked Preseason](docs/RANKED-PRESEASON.md) is enabled by the production AWS release. Generic self-hosted servers keep it disabled unless configured. Use [local previews](docs/LOCAL-PREVIEW.md) for future testing: `npm run preview:local` starts an isolated ranked game without paid AWS preview infrastructure.
 
 ## Run and check
 

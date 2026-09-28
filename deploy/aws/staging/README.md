@@ -1,5 +1,7 @@
 # Private ranked-play staging
 
+**Historical setup:** the owner requested retirement of the paid AWS preview on 28 September 2026. Future previews must use [local hosting](../../../docs/LOCAL-PREVIEW.md); do not reprovision this stack as part of routine development. See the deployment record for retirement verification.
+
 This is a separate AWS stack for `https://preview.farfield.fun`, with the game and API on the **same origin**. It does not deploy to `farfield.fun` or `api.farfield.fun` and does not share production match/ranking storage, instance roles, networks or backups.
 
 The staging EC2 security group has **no inbound rules**. The Node service publishes no host port. A dedicated outbound Cloudflare Tunnel reaches it over Docker's private network. Cloudflare Access protects the entire preview hostname, including the API, health endpoint and game assets; the tunnel additionally validates Access JWTs before forwarding requests. The instance's public address supports outbound downloads/SSM only and cannot bypass the private access gate.
