@@ -216,3 +216,11 @@ Private preview build `cfb300e35fbd6f21` passed real four-session custom play, A
 Candidate validation: typecheck/build passed, 12 connected/disconnected desktop/tablet/phone layouts passed, and all six existing ranked sign-in/retry browser cases passed. A final 932×430 rejected-signature visual check confirmed clear controls and no footer overlap. Evidence: `artifacts/online-layout.json` and `artifacts/ranked-landscape-hint-check.json`.
 
 Deployed to private preview only as source `a7c46d4`, build `57d2ed168a7d2aa7`. Six live connected/disconnected desktop, phone and tablet menu checks passed with no page errors; wallet discovery used a fixture, with no signatures or matches created. Evidence: `artifacts/online-layout-preview.json` and `artifacts/aws-staging-release-a7c46d4.json`. Public production is unchanged.
+
+## Title leaderboard and rank filters
+
+- [x] Leaderboard available from the title menu without connecting a wallet; Back remembers the title or Online PvP entry point.
+- [x] Custom rank selector offers All ranks plus Bronze through Diamond, with loading, error/retry and rank-specific empty states.
+- [x] Server filters the full ranked population before limiting results, keeps global positions, rejects invalid ranks and follows displayed rounded-rating boundaries.
+
+Released to private preview as source `3661261`, build `94494df55d15226e`. All 173 tests, typecheck, build and HTTP integration passed. Candidate browser coverage passed 28 checks, including the seven-action title menu on a 320px phone. Live desktop/320px phone checks used the real API for every filter, Back navigation and invalid-filter rejection with zero page errors. Live standings were empty; nonempty global positions are verified by server tests and explicit browser fixtures. No wallet signatures or matches were created. Evidence: `artifacts/leaderboard-browser.json` and `artifacts/leaderboard-live.json`. Production remains unchanged.
