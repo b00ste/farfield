@@ -24,7 +24,7 @@ Matchmaking starts within 150 rating points, widens by 50 every ten seconds, and
 
 Wins, losses and draws count; resource and worker counts do not. Leaving or forfeiting a live match is a loss. Disconnects retain the existing 60-second grace period. Both disconnected players can produce a draw. Cancelled queue entries do not count.
 
-A server restart voids unfinished ranked games without changing ratings. A server loop stall longer than five seconds also voids active ranked games. An already-committed result survives a stale room snapshot and is not applied twice. The result screen distinguishes cancellations from wins and losses. Daily staging backup briefly stops the server, so active test matches can be cancelled during that maintenance window.
+A server restart voids unfinished ranked games without changing ratings. A server loop stall longer than five seconds also voids active ranked games. An already-committed result survives a stale room snapshot and is not applied twice. The result screen distinguishes cancellations from wins and losses. Production backups use an online SQLite snapshot and do not stop active matches.
 
 ## Storage and configuration
 
@@ -32,13 +32,13 @@ Server-only environment:
 
 ```env
 FARFIELD_RANKED_ENABLED=1
-FARFIELD_RANKED_ORIGIN=https://preview.farfield.fun
+FARFIELD_RANKED_ORIGIN=https://farfield.fun
 FARFIELD_RANKINGS_PATH=/data/rankings.sqlite
 FARFIELD_STATE_PATH=/data/rooms.json
-FARFIELD_ALLOWED_ORIGINS=https://preview.farfield.fun
+FARFIELD_ALLOWED_ORIGINS=https://farfield.fun
 ```
 
-Build with an empty `PUBLIC_API_ORIGIN` for the private preview; the app and API share the Access-protected origin. Do not copy production rooms or ratings into the preview. The RPC upstream remains a private runtime setting.
+Production builds use `PUBLIC_API_ORIGIN=https://api.farfield.fun`. Local previews use a same-origin API and separate local saves; see [the local preview guide](LOCAL-PREVIEW.md). Do not copy production rooms or ratings into a preview. The RPC upstream remains a private runtime setting.
 
 The rankings database lives outside the web root, uses 0600 permissions and full synchronous SQLite transactions. One transaction records the match, both profile updates and both results. Match IDs are immutable and exact replays are idempotent. Room snapshots are separate; the results ledger is authoritative when restoring a previously committed result.
 
@@ -49,6 +49,6 @@ The first implementation assumes a single authoritative process. It does not add
 - `npm test`: rating math, transactions/rollback, replay, placements, queue widening, wallet isolation, reconnect boundaries and restart recovery.
 - `npm run test:ranked-server`: real server, real test-wallet signatures, fixture chain reads, matchmaking, forfeit settlement, custom exclusion and process restart.
 - `npm run test:ranked-browser`: Browser Testing workspace only; host signature UI fixtures, failure/retry, private token boundary and desktop/mobile layout. Fixtures never ship in the app.
-- Live preview: verify unauthenticated requests to both the app and `/api/*` are denied; sign in with an approved email; test two real eligible wallets, play to a result and re-open the leaderboard. Browser emulation cannot verify native mobile wallet switching.
+- Local device preview: test two real eligible wallets, play to a result and re-open the leaderboard. Use the configured HTTPS origin for mobile wallet testing. Browser emulation cannot verify native mobile wallet switching.
 
 Future previews run locally using [the local preview guide](LOCAL-PREVIEW.md). The former AWS preview setup is retained only as a historical reference in `deploy/aws/staging/README.md`.

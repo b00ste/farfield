@@ -1,6 +1,6 @@
 # Private ranked-play staging
 
-**Historical setup:** the owner requested retirement of the paid AWS preview on 28 September 2026. Future previews must use [local hosting](../../../docs/LOCAL-PREVIEW.md); do not reprovision this stack as part of routine development. See the deployment record for retirement verification.
+**Historical setup:** the paid AWS preview was removed on 28 September 2026. Future previews must use [local hosting](../../../docs/LOCAL-PREVIEW.md); do not reprovision this stack as part of routine development. See the [deployment record](../../../docs/STAGING-DEPLOYMENT.md) for retirement verification.
 
 This is a separate AWS stack for `https://preview.farfield.fun`, with the game and API on the **same origin**. It does not deploy to `farfield.fun` or `api.farfield.fun` and does not share production match/ranking storage, instance roles, networks or backups.
 

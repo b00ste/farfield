@@ -224,3 +224,15 @@ Deployed to private preview only as source `a7c46d4`, build `57d2ed168a7d2aa7`. 
 - [x] Server filters the full ranked population before limiting results, keeps global positions, rejects invalid ranks and follows displayed rounded-rating boundaries.
 
 Released to private preview as source `3661261`, build `94494df55d15226e`. All 173 tests, typecheck, build and HTTP integration passed. Candidate browser coverage passed 28 checks, including the seven-action title menu on a 320px phone. Live desktop/320px phone checks used the real API for every filter, Back navigation and invalid-filter rejection with zero page errors. Live standings were empty; nonempty global positions are verified by server tests and explicit browser fixtures. No wallet signatures or matches were created. Evidence: `artifacts/leaderboard-browser.json` and `artifacts/leaderboard-live.json`. Production remains unchanged.
+
+
+## Production ranked release and local previews — 28 September 2026
+
+- [x] Merged PR #6 and deployed source `d5f5170deebd871181ce4cdea6bb61414d600d29`, public build `6bfed644fb6aff75`.
+- [x] Enabled production Preseason with a fresh ranking database; no preview ratings imported. Existing production room storage and private RPC retained.
+- [x] Added online room/SQLite backups without stopping games; restored the production archive into isolated scratch and verified JSON and SQLite integrity.
+- [x] Added `npm run preview:local` with isolated persistent local saves and a startup smoke check. Future previews use local hosting.
+
+Validation: 175 tests, typecheck, FriendSDK checks, build, ranked HTTP integration and both GitHub CI runs passed. Live production desktop and 320px phone checks passed title leaderboard access, all rank filters, both Back destinations, invalid-filter rejection and real cross-origin API access with no page errors or overflow. Unmocked RPC checks loaded 42 Friends without exposing the private provider. These live checks created no ranked signatures or records; physical-device eligible-wallet ranked sign-in still needs a manual check. Evidence: `artifacts/aws-production-release-d5f5170.json`, `artifacts/leaderboard-production.json`, `artifacts/production-network.json` and `artifacts/production-rpc.json`.
+
+- [x] Retired the dedicated AWS preview after production passed. All 12 backup versions are verified in private local archives. Terraform has zero remaining resources; retained disk, SSM parameters, backup bucket and Cloudflare preview access/routing are removed. Final AWS checks found no billable preview leftovers. See [the retirement record](STAGING-DEPLOYMENT.md).

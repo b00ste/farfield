@@ -1,5 +1,19 @@
 # Private ranked preview — 21 September 2026
 
+> **Retired on 28 September 2026.** The AWS preview and its Cloudflare route/access resources have been removed. The records below describe historical deployments. Future testing uses [local previews](LOCAL-PREVIEW.md).
+
+## Retirement and production promotion
+
+PR #6 was merged and deployed to production as source `d5f5170deebd871181ce4cdea6bb61414d600d29`, build `6bfed644fb6aff75`. Production started with fresh rankings and retained its existing room storage/private RPC. Desktop/phone live leaderboard checks and an isolated restore of the new online rooms/SQLite backup passed before teardown.
+
+The reviewed Terraform teardown removed 19 dedicated staging resources, leaving zero managed resources. The retained data disk and two staging SSM parameters were also deleted. Final checks found no staging volumes, snapshots, Elastic IPs, alarms or log groups; the backup bucket, VPC, IAM role and instance profile are absent. Cloudflare preview DNS, Access application, service token and Tunnel were removed. Production remained healthy after teardown; Phlox and Coder workspaces were untouched.
+
+All 12 preview backup versions were archived privately outside AWS on the primary and infrastructure workspaces, with file hashes, room JSON and SQLite integrity verified. These archives contain private state and are deliberately outside Git. No preview rankings were imported into production. Only provider deletion records and local archives remain; no billable preview resources were found.
+
+Evidence: `artifacts/preview-retirement-complete.json`, `artifacts/aws-production-release-d5f5170.json` and `artifacts/leaderboard-production.json`.
+
+## Historical deployment record
+
 The app and game API share `https://preview.farfield.fun`. Cloudflare Access permits verified `@kethalia.com` email addresses. It also has a separate, expiring automation credential restricted to this preview. Production game/API DNS and application builds remain unchanged.
 
 | Item | Deployed value |
