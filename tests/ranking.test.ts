@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync, statSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { RankingStore } from "../server/ranking.ts";
+import { RankingStore, type LeaderboardDivision } from "../server/ranking.ts";
 
 const A = `0x${"ab".repeat(20)}`,
   B = `0x${"cd".repeat(20)}`,
@@ -233,4 +233,128 @@ test("completed placements use the published five division boundaries", (t) => {
   } finally {
     db.close();
   }
+});
+
+test("division filtering finds players beyond the overall top 20 and retains global positions", (t) => {
+  const { store, file } = fixture(t);
+  const db = new DatabaseSync(file);
+  try {
+    const insert = db.prepare(
+      "INSERT INTO ranked_profiles(wallet,rating,matches,wins,last_friend_id) VALUES (?,?,5,5,?)",
+    );
+    for (let i = 1; i <= 50; i++) {
+      insert.run(
+        `0x${i.toString(16).padStart(40, "0")}`,
+        i <= 20 ? 2000 + i : 1000 + i,
+        String(i),
+      );
+    }
+    db.prepare(
+      "INSERT INTO ranked_profiles(wallet,rating,last_friend_id) VALUES (?,5000,'999')",
+    ).run(C);
+  } finally {
+    db.close();
+  }
+  const all = store.leaderboard();
+  assert.equal(all.entries.length, 20);
+  assert.ok(all.entries.every((entry) => entry.division === "Diamond"));
+  assert.deepEqual(store.leaderboard(20, "All"), all);
+  const bronze = store.leaderboard(20, "Bronze");
+  assert.equal(bronze.entries.length, 20);
+  assert.deepEqual(
+    bronze.entries.map((entry) => entry.position),
+    Array.from({ length: 20 }, (_, i) => i + 21),
+  );
+  assert.equal(bronze.entries[0].friendId, "50");
+  assert.ok(
+    bronze.entries.every(
+      (entry) => entry.division === "Bronze" && !entry.provisional,
+    ),
+  );
+  assert.deepEqual(
+    store.leaderboard(3, "Bronze").entries,
+    bronze.entries.slice(0, 3),
+  );
+  assert.equal(store.leaderboard(20, "Gold").entries.length, 0);
+  assert.equal(store.leaderboard(100).entries.length, 50);
+  assert.equal(store.leaderboard(100, "Diamond").entries.length, 20);
+  assert.doesNotMatch(JSON.stringify(bronze), /0x[a-f0-9]{40}/i);
+});
+
+test("division filters match rounded display thresholds and preserve deterministic tie order", (t) => {
+  const { store, file } = fixture(t);
+  store.profile(A, "1");
+  store.profile(B, "2");
+  store.profile(C, "3");
+  const db = new DatabaseSync(file);
+  try {
+    db.exec(
+      "UPDATE ranked_profiles SET matches=5,wins=5,rating=1300,deviation=100",
+    );
+    assert.deepEqual(
+      store.leaderboard(20, "Silver").entries.map((entry) => entry.friendId),
+      ["1", "2", "3"],
+    );
+    db.prepare("UPDATE ranked_profiles SET deviation=50 WHERE wallet=?").run(C);
+    assert.deepEqual(
+      store.leaderboard(20, "Silver").entries.map((entry) => entry.friendId),
+      ["3", "1", "2"],
+    );
+    const divisions: LeaderboardDivision[] = [
+      "Bronze",
+      "Silver",
+      "Gold",
+      "Platinum",
+      "Diamond",
+    ];
+    for (const [rating, expected] of [
+      [1199.49, "Bronze"],
+      [1199.5, "Silver"],
+      [1399.49, "Silver"],
+      [1399.5, "Gold"],
+      [1599.49, "Gold"],
+      [1599.5, "Platinum"],
+      [1799.49, "Platinum"],
+      [1799.5, "Diamond"],
+    ] as const) {
+      db.prepare("UPDATE ranked_profiles SET rating=? WHERE wallet=?").run(
+        rating,
+        A,
+      );
+      assert.equal(store.profile(A).division, expected);
+      const global = store
+        .leaderboard()
+        .entries.find((entry) => entry.friendId === "1")!;
+      for (const division of divisions) {
+        const entry = store
+          .leaderboard(20, division)
+          .entries.find((row) => row.friendId === "1");
+        if (division === expected) assert.deepEqual(entry, global);
+        else assert.equal(entry, undefined);
+      }
+    }
+  } finally {
+    db.close();
+  }
+});
+
+test("invalid leaderboard divisions reject instead of silently showing all ranks", (t) => {
+  const { store } = fixture(t);
+  for (const division of [
+    "Unranked",
+    "gold",
+    "",
+    "__proto__",
+    "toString",
+    null,
+    1,
+    {},
+    ["Gold"],
+  ]) {
+    assert.throws(
+      () => store.leaderboard(20, division as LeaderboardDivision),
+      /Invalid leaderboard division/,
+    );
+  }
+  assert.deepEqual(store.leaderboard(20, undefined), store.leaderboard());
 });

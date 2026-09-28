@@ -1111,6 +1111,10 @@ body {
 .ranked-leaderboard { position: absolute; inset: 0; z-index: 3; background: #0b1923f5; padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); display: flex; flex-direction: column; min-width: 0; }
 .ranked-leaderboard header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .ranked-leaderboard button { min-height: 44px; padding: 8px 16px; }
+.ranked-leaderboard header h2 { margin: 0; font-size: clamp(20px, 3vw, 32px); }
+.leaderboard-filters { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.leaderboard-filters label { display: grid; gap: 8px; font-size: 12px; color: #a9bcb2; min-width: 180px; }
+.leaderboard-filters > span { font-size: 11px; color: #a9bcb2; padding-bottom: 10px; }
 .ranked-standings { overflow: auto; min-height: 0; margin-top: 20px; }
 .ranked-standings table { width: 100%; border-collapse: collapse; text-align: left; font-size: clamp(11px, 1.3vw, 16px); }
 .ranked-standings th, .ranked-standings td { padding: 12px 6px; border-bottom: 1px solid #344a53; }

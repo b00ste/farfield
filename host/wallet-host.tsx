@@ -102,6 +102,7 @@ function WalletHost() {
     "main",
   );
   const menuRef = useRef(menu);
+  const [leaderboardFrom, setLeaderboardFrom] = useState<"main" | "online">("main");
   menuRef.current = menu;
   useEffect(() => {
     let live = true;
@@ -388,7 +389,7 @@ function WalletHost() {
             </span>
             {connection}
           </header>
-          {menu === "leaderboard" && !picker && ranked.config.data?.enabled && <RankedLeaderboard season={ranked.config.data.season} onBack={() => setMenu("online")} />}
+          {menu === "leaderboard" && !picker && ranked.config.data?.enabled && <RankedLeaderboard season={ranked.config.data.season} backTo={leaderboardFrom === "main" ? "main menu" : "online play"} onBack={() => setMenu(leaderboardFrom)} />}
           {!picker && menu !== "leaderboard" && (
             <div className="landing-content">
               <div className="title-lockup">
@@ -425,11 +426,12 @@ function WalletHost() {
                   >
                     Join friends <span>03</span>
                   </button>
+                  {ranked.config.data?.enabled && <button onClick={() => { setLeaderboardFrom("main"); setMenu("leaderboard"); }}>Leaderboard <span>04</span></button>}
                   <button
                     aria-label="Landing settings"
                     onClick={() => setSettings(true)}
                   >
-                    Settings <span>04</span>
+                    Settings <span>{ranked.config.data?.enabled ? "05" : "04"}</span>
                   </button>
                   {connected && (
                     <button
@@ -438,10 +440,10 @@ function WalletHost() {
                         setPicker(true);
                       }}
                     >
-                      Change commander <span>05</span>
+                      Change commander <span>{ranked.config.data?.enabled ? "06" : "05"}</span>
                     </button>
                   )}
-                  <InstallGameButton number={connected ? "06" : "05"} />
+                  <InstallGameButton number={String((connected ? 6 : 5) + (ranked.config.data?.enabled ? 1 : 0)).padStart(2, "0")} />
                 </nav>
               ) : (
                 <section className={`landing-setup${menu === "online" ? " online-setup" : ""}`} aria-label="Match setup">
@@ -525,7 +527,7 @@ function WalletHost() {
                       <button disabled aria-label="Wagered · Coming soon"><strong>Wagered</strong><span>Coming soon</span></button>
                     </div>
                   )}
-                  {menu === "online" && ranked.config.data?.enabled && <div className="ranked-setup"><div className="ranked-status"><span className="ranked-status-label">Ranked 1v1</span><RankSummary profile={ranked.profile} /></div><button onClick={() => setMenu("leaderboard")}>Leaderboard ↗</button></div>}
+                  {menu === "online" && ranked.config.data?.enabled && <div className="ranked-setup"><div className="ranked-status"><span className="ranked-status-label">Ranked 1v1</span><RankSummary profile={ranked.profile} /></div><button onClick={() => { setLeaderboardFrom("online"); setMenu("leaderboard"); }}>Leaderboard ↗</button></div>}
                   {menu === "online" && ranked.config.isError && <p role="alert">Online service unavailable. <button onClick={() => void ranked.config.refetch()}>Retry</button></p>}
                   {menu === "online" && ranked.error && <p role="alert">{ranked.error}</p>}
                   <button

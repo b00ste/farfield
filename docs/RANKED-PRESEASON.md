@@ -8,6 +8,8 @@ Online PvP asks for a wallet signature before ranked matchmaking. The message id
 
 Five completed matches establish a division. Profiles show placements, rating, wins, losses and draws. The leaderboard lists the top 20 players who completed placements, using Friend labels without publishing wallet addresses. Public Friend IDs can still be correlated with on-chain ownership; this is not anonymity.
 
+Open the leaderboard from the title menu or Online PvP, without a wallet connection. The custom rank selector offers All ranks, Bronze, Silver, Gold, Platinum and Diamond. Each division shows its top 20 from the full eligible population, retaining overall positions. Back returns to the menu you opened it from. The optional `division` field on `POST /api/ranked/leaderboard` accepts those division names or `All`; invalid values are rejected.
+
 Preseason uses Glicko-1 with initial rating 1500 and rating deviation 350. Each match is a rating period; both updates use pre-match values. Deviation has a floor of 50 and does not increase for inactivity in this first version. The authoritative formula is [Glickman's specification](https://www.glicko.net/glicko/glicko.pdf).
 
 | Division | Displayed rating after placements |

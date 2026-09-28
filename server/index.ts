@@ -134,7 +134,7 @@ const server = createServer(async (req, res) => {
           const session = rankedAuth.access(bearer);
           res.end(JSON.stringify({ profile: rankings.profile(session.address) }));
         } else if (url.pathname === "/api/ranked/leaderboard") {
-          res.end(JSON.stringify(rankings.leaderboard()));
+          res.end(JSON.stringify(rankings.leaderboard(20, body.division)));
         } else res.writeHead(404).end(JSON.stringify({ error: "Unknown endpoint." }));
         return;
       }

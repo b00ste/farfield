@@ -24,6 +24,19 @@ export type RankDivision =
   | "Gold"
   | "Platinum"
   | "Diamond";
+export type LeaderboardDivision = "All" | Exclude<RankDivision, "Unranked">;
+// Raw rating cutoffs equivalent to Math.round(rating) in publicProfile.
+const DIVISION_BOUNDS: Record<
+  LeaderboardDivision,
+  [number | null, number | null]
+> = {
+  All: [null, null],
+  Bronze: [null, 1199.5],
+  Silver: [1199.5, 1399.5],
+  Gold: [1399.5, 1599.5],
+  Platinum: [1599.5, 1799.5],
+  Diamond: [1799.5, null],
+};
 export type RankProfile = {
   season: typeof RANK_SEASON;
   rating: number;
@@ -250,22 +263,41 @@ export class RankingStore {
         .run(friend, key);
     return publicProfile(this.row(key));
   }
-  leaderboard(limit = 20): {
+  leaderboard(
+    limit = 20,
+    division: LeaderboardDivision = "All",
+  ): {
     season: typeof RANK_SEASON;
     entries: Array<RankProfile & { position: number }>;
   } {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
       throw new Error("Ranking limit must be between 1 and 100.");
+    if (
+      typeof division !== "string" ||
+      !Object.hasOwn(DIVISION_BOUNDS, division)
+    )
+      throw new Error("Invalid leaderboard division.");
+    const [lower, upper] = DIVISION_BOUNDS[division];
+    // Rank everyone first. Filtering inside the CTE would renumber the selected
+    // division, while limiting before filtering would hide its lower ranks.
     const rows = this.db
       .prepare(
-        "SELECT * FROM ranked_profiles WHERE matches >= 5 ORDER BY rating DESC, deviation ASC, wallet ASC LIMIT ?",
+        `WITH standings AS (
+          SELECT *, ROW_NUMBER() OVER (ORDER BY rating DESC, deviation ASC, wallet ASC) AS position
+          FROM ranked_profiles WHERE matches >= 5
+        )
+        SELECT * FROM standings
+        WHERE (? IS NULL OR rating >= ?) AND (? IS NULL OR rating < ?)
+        ORDER BY position LIMIT ?`,
       )
-      .all(limit) as ProfileRow[];
+      .all(lower, lower, upper, upper, limit) as Array<
+      ProfileRow & { position: number }
+    >;
     return {
       season: RANK_SEASON,
-      entries: rows.map((row, i) => ({
+      entries: rows.map((row) => ({
         ...publicProfile(row),
-        position: i + 1,
+        position: row.position,
       })),
     };
   }

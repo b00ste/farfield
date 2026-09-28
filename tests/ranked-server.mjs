@@ -45,6 +45,11 @@ async function api(path,body={},token,expected=200){const response=await fetch(o
 async function login(account,friendId){const proof=await api('ranked/challenge',{address:account.address,friendId});const signature=await account.signMessage({message:proof.message});return api('ranked/verify',{id:proof.id,signature});}
 try{
  await start();assert.equal((await api('ranked/config')).enabled,true);
+ for(const division of ['All','Bronze','Silver','Gold','Platinum','Diamond']){
+  assert.deepEqual(await api('ranked/leaderboard',{division}),{season:'Preseason',entries:[]});
+ }
+ await api('ranked/leaderboard',{division:'Master'},undefined,400);
+ await api('ranked/leaderboard',{division:null},undefined,400);
  await api('matchmake',{friendId:'1'},undefined,400);
  await api('ranked/verify',{id:'invented',signature:'0x11'},undefined,400);
  const signedA=await login(a,'1'),signedB=await login(b,'2');

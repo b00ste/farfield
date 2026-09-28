@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSignMessage } from "wagmi";
 import { apiUrl } from "./api";
 import type { RankProfile } from "../games/farfield/network";
+import { GameSelect } from "../games/farfield/GameSelect";
 
 async function rankedRequest<T>(path: string, body: unknown = {}, token?: string): Promise<T> {
   const response = await fetch(apiUrl(`/api/ranked/${path}`), {
@@ -84,13 +85,20 @@ export function RankSummary({ profile }: { profile: RankProfile | null }) {
   return <span className="rank-summary">{!profile ? "Five placement matches" : !profile.provisional ? `${profile.division} · ${Math.round(profile.rating)} RP` : `Placements · ${profile.placements.completed}/${profile.placements.required}`}</span>;
 }
 
-export function RankedLeaderboard({ season, onBack }: { season: string; onBack: () => void }) {
-  const board = useQuery({ queryKey: ["ranked-leaderboard", season], queryFn: () => rankedRequest<{ season: string; entries: (RankProfile & { position: number })[] }>("leaderboard"), staleTime: 15000, retry: 1 });
+const rankFilters = ["All", "Bronze", "Silver", "Gold", "Platinum", "Diamond"].map(value => ({ value, label: value === "All" ? "All ranks" : value }));
+
+export function RankedLeaderboard({ season, onBack, backTo = "online play" }: { season: string; onBack: () => void; backTo?: "main menu" | "online play" }) {
+  const [division, setDivision] = useState("All");
+  const board = useQuery({ queryKey: ["ranked-leaderboard", season, division], queryFn: () => rankedRequest<{ season: string; entries: (RankProfile & { position: number })[] }>("leaderboard", { division }), staleTime: 15000, retry: 1 });
   return <section className="ranked-leaderboard" aria-label="Ranked leaderboard">
-    <header><button onClick={onBack} aria-label="Back to online play">← Back</button><h2>{season}</h2><span>Leaderboard</span></header>
+    <header><button onClick={onBack} aria-label={`Back to ${backTo}`}>← Back</button><h2>Leaderboard</h2><span>{season}</span></header>
+    <div className="leaderboard-filters">
+      <label>Rank<GameSelect label="Filter by rank" value={division} options={rankFilters} onChange={setDivision} /></label>
+      <span>Top 20{division === "All" ? " overall" : ` · ${division}`} · Global positions</span>
+    </div>
     {board.isPending ? <p role="status">Loading standings…</p> : board.isError ? <p role="alert">Standings unavailable. <button onClick={() => void board.refetch()}>Retry</button></p> : <>
       <div className="ranked-standings"><table><thead><tr><th>Place</th><th>Commander</th><th>Rank</th><th>Rating</th><th>Wins</th></tr></thead><tbody>{board.data.entries.map((entry, index) => <tr key={`${entry.friendId}-${index}`}><td>{entry.position}</td><td>{entry.name}</td><td>{entry.label}</td><td>{Math.round(entry.rating)}</td><td>{entry.wins}</td></tr>)}</tbody></table></div>
-      {!board.data.entries.length && <p>Complete five placement matches to enter the leaderboard.</p>}
+      {!board.data.entries.length && <p>{division === "All" ? "Complete five placement matches to enter the leaderboard." : `No commanders in ${division} yet.`}</p>}
     </>}
   </section>;
 }
